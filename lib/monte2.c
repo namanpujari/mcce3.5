@@ -37,9 +37,9 @@ int monte2() {
     int i_red, j_red;
     int ic, jc, i_saved;
     FILE *fp;
-int r1=0;
-int r2=0;
-int r=0;
+	int r1=0;
+	int r2=0;
+	// int r=0; // Commented out by Salah on Dec. 2015 (not used)
     time_t   timer_start, timer_end;
 
     timer_start = time(NULL);
@@ -56,12 +56,16 @@ int r=0;
     }
     if (!prot.n_res) return USERERR;
 
-    /* Load pairwise */
-   //  fprintf("ssssss",idum);
-   // printf("before load pairwise\n"); 
-    if (monte2_load_pairwise(prot)) return USERERR;
- //   printf("after load pairwise\n"); 
     
+    // Load pairwise
+    printf("   Load pairwise interactions ...\n"); fflush(stdout);
+    if (monte2_load_pairwise(prot)) {
+        printf("   FATAL: pairwise interaction not loaded\n");
+        return USERERR;
+    }
+    printf("   Done\n\n");
+    fflush(stdout);
+	
     monte2_check_toggle(prot);
     
     if (env.monte_seed < 0) idum = time(NULL);
@@ -243,7 +247,7 @@ ENTROPY_CORRECTION_FUNCTION(&prot_red);
 for(r1=0;r1<prot_red.n_res;r1++)
 for(r2=0;r2<prot_red.res[r1].num_of_states;r2++)
 prot_red.res[r1].IS[r2].totalOCC=0;
-/*
+				/*
                 double E_chk = 0.;
                 for (i_res=0;i_res<prot_red.n_res;i_res++) {
                     E_chk += prot_red.res[i_res].conf_w->E_self;
@@ -341,7 +345,14 @@ prot_red.res[r1].IS[r2].totalOCC=0;
     }
     
     monte_out(prot, env.titr_steps);
-    curve_fitting(prot);
+    
+	// curve fitting 
+    printf("   Fit titration curves to get pKa/Em ...\n");
+    fflush(stdout);
+    if (curve_fitting(prot)) {
+        printf("   Fatal error detected in fitting program.\n");
+        return USERERR;
+    }
     
     //printf("free prot, occ_table\n");
     for (ic=0;ic<prot.nc;ic++) free(prot.conf[ic]->occ_table);
@@ -459,6 +470,16 @@ int monte2_load_pairwise(PROT prot) {
     int   n_miss_jc = 0,i_miss_ic,j_miss_ic,i_miss_jc,j_miss_jc;
     int   *n_miss_ic = NULL, **miss_ic = NULL, *miss_jc = NULL;
     
+	
+	//int i, j, kc; // Salah added on Dec. 2015
+    EMATRIX ematrix; // Salah added on Dec. 2015
+	// Salah added on Dec. 2015 =====
+	ematrix.n = 0;  
+    if (load_energies(&ematrix, ".", 0)<0) {
+        printf("   File %s not found\n", ENERGY_TABLE);
+        return USERERR;
+    }
+	
     /* declare memory */
     if (!(pairwise = (double **) malloc(prot.nc * sizeof(double *)))) {
         printf("   FATAL: memory error in load_pairwise()\n");fflush(stdout);
@@ -472,111 +493,19 @@ int monte2_load_pairwise(PROT prot) {
         memset(pairwise[ic],0,prot.nc * sizeof(double));
     }
     
-    for (ic=0; ic<prot.nc; ic++) {
-        
-        /* get opp file name */
-        if (!env.monte_old_input) {
-            sprintf(fname, "%s/%s.opp", STEP3_OUT, prot.conf[ic]->uniqID);
-        }
-        else {
-            sprintf(fname, "try2/V%s.opp", prot.conf[ic]->uniqID);
-            memmove(fname+9,fname+10,11);
-            memmove(fname+10,fname+11,9);
-        }
-        /* open opp file */
-        if (!(fp = fopen(fname, "r"))) {
-            if (param_get("NATOM", prot.conf[ic]->confName, "", &natom)) {
-                printf("   WARNING: no pairwise energy file (%s) for conformer %s\n",fname, prot.conf[ic]->uniqID);
-                printf("   WARNING: no NATOM for %s, assuming it's dummy conformer (natom = 0, all pairwise = 0)\n", prot.conf[ic]->confName);fflush(stdout);
-                natom = 0;
-                param_sav("NATOM", prot.conf[ic]->confName, "", &natom, sizeof(int));
-            }
-            if (natom == 0) { /* dummy */
-                for (jc=0; jc<prot.nc; jc++) pairwise[ic][jc] = 0.0;
-                strncpy(prot.conf[ic]->history+2,"DM",2);
-                continue;
-            }
-            else {
-                printf("   FATAL: can't open file %s\n", fname);fflush(stdout);
-                return USERERR;
-            }
-        }
-        
-        /* load pairwise energy */
-        for (jc=0;jc<prot.nc;jc++) prot.conf[jc]->on = 0;
-        jc = 0;
-        while (fgets(sbuff, sizeof(sbuff), fp)) {
-            /*
-            .01234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
-            .  CG2 THR A 005A         0.000      0.000
-            */
-            if (!env.monte_old_input) {
-                if (strlen(sbuff) < 20) break;
-                sscanf(sbuff, "%d %s %f %f", &serial, uniqID, &ele_pair, &vdw_pair);
-            }
-            else {
-                strncpy(uniqID, sbuff+6, 10); uniqID[10]  = '\0';
-                strncpy(stemp, sbuff+20, 10); stemp[10] = '\0'; ele_pair = atof(stemp) / KCAL2KT;
-                strncpy(stemp, sbuff+30, 10); stemp[10] = '\0'; vdw_pair = atof(stemp) / KCAL2KT;
-            }
-
-            jc_start = jc;
-            while (strcmp(uniqID, prot.conf[jc]->uniqID)) {
-                jc++;
-                if (jc >= prot.nc) jc = 0;
-                if (jc == jc_start) break;
-            }
-            if (!strcmp(uniqID, prot.conf[jc]->uniqID)) {
-                //printf("%s-%s %f,%f\n",prot.conf[ic]->uniqID, prot.conf[jc]->uniqID, ele_pair,vdw_pair);
-                if (vdw_pair < 500)
-                    pairwise[ic][jc] = ele_pair*env.scale_ele + vdw_pair*env.scale_vdw;
-                else
-                    pairwise[ic][jc] = ele_pair*env.scale_ele + vdw_pair;
-
-                prot.conf[jc]->on = 1;
-            }
-        }
-        fclose(fp);
-        
-        /* checking: if pairwise not loaded, make sure it's dummy conformer*/
-        for (jc=0;jc<prot.nc;jc++) {
-            if (!prot.conf[jc]->on) {
-                if (param_get("NATOM", prot.conf[jc]->confName, "", &natom)) {
-                    printf("   WARNING: no conformer %s entry in file %s\n", prot.conf[jc]->uniqID,fname);
-                    printf("   WARNING: no NATOM for %s, assuming it's dummy conformer (natom = 0, all pairwise = 0)\n", prot.conf[jc]->confName);fflush(stdout);
-                    natom = 0;
-                    param_sav("NATOM", prot.conf[jc]->confName, "", &natom, sizeof(int));
-                }
-                if (natom == 0) {
-                    pairwise[ic][jc] = 0.0;
-                }
-                else {
-                    if (!env.adding_conf) {
-                        printf("   FATAL: Interaction between %s and %s does not exist in file %s\n", prot.conf[ic]->uniqID, prot.conf[jc]->uniqID, fname);fflush(stdout);
-                        return USERERR;
-                    }
-                    else {
-                        for (i_miss_jc=0;i_miss_jc<n_miss_jc;i_miss_jc++) {
-                            if (jc == miss_jc[i_miss_jc]) break;
-                        }
-                        if (i_miss_jc == n_miss_jc) {
-                            n_miss_jc++;
-                            miss_jc = realloc(miss_jc,n_miss_jc*sizeof(int));
-                            miss_jc[i_miss_jc] = jc;
-                            n_miss_ic = realloc(n_miss_ic,n_miss_jc*sizeof(int));
-                            n_miss_ic[i_miss_jc] = 0;
-                            miss_ic = realloc(miss_ic,n_miss_jc*sizeof(int *));
-                            miss_ic[i_miss_jc] = NULL;
-                        }
-                        
-                        n_miss_ic[i_miss_jc]++;
-                        miss_ic[i_miss_jc] = realloc(miss_ic[i_miss_jc],n_miss_ic[i_miss_jc]*sizeof(int));
-                        miss_ic[i_miss_jc][n_miss_ic[i_miss_jc]-1]=ic;
-                    }
-                }
-            }
-        }
+    for (ic=0; ic<ematrix.n; ic++) {
+       for (jc=0; jc<ematrix.n; jc++) {
+		    if (ematrix.pw[ic][jc].vdw < 500)
+                pairwise[ic][jc] = ematrix.pw[ic][jc].ele*env.scale_ele + ematrix.pw[ic][jc].vdw*env.scale_vdw;
+            else
+                pairwise[ic][jc] = ematrix.pw[ic][jc].ele*env.scale_ele + ematrix.pw[ic][jc].vdw;
+			
+		}
     }
+	// free memory
+    free_ematrix(&ematrix);
+        
+        
     
     if (n_miss_jc) {
         for (i_miss_jc=0;i_miss_jc<n_miss_jc;i_miss_jc++) {
@@ -1607,6 +1536,7 @@ void gmonte_mc(PROT *prot_p) {
     }
 }
 
+/*
 int load1_pairwise()
 {   int i, j, kc;
     EMATRIX ematrix;
@@ -1617,14 +1547,7 @@ int load1_pairwise()
         return USERERR;
     }
 
-    /* scan conformers to see if all pw were calculated, DISABLED TEMPERORY 
-    for (i=0; i<ematrix.n; i++) {
-        if (!ematrix.conf[i].on && (ematrix.conf[i].uniqID[3] != 'D' || ematrix.conf[i].uniqID[4] != 'M')) {
-           printf("      Incompleted delphi run, the first place detected at %s\n ", ematrix.conf[i].uniqID);
-           return USERERR;
-        }
-    }
-    */
+    
     
     
     if (!(pairwise = (double **) malloc(ematrix.n * sizeof(double *)))) {
@@ -1640,51 +1563,17 @@ int load1_pairwise()
     
     for (i=0; i<ematrix.n; i++) {
        for (j=0; j<ematrix.n; j++) {
-           /*
-           if (ematrix.pw[i][j].vdw > 990. && ematrix.pw[j][i].vdw > 990.) {
-               pairwise[i][j] = pairwise[j][i] = 999.;
-           }
-           else {
-               pairwise[i][j] = pairwise[j][i] = ((ematrix.pw[i][j].ori + ematrix.pw[j][i].ori)*env.scale_ele \
-                   +(ematrix.pw[i][j].vdw + ematrix.pw[j][i].vdw)*env.scale_vdw)/2.0 ;
-           }
-           */
+           
            pairwise[i][j] = pairwise[j][i] = ((ematrix.pw[i][j].ele + ematrix.pw[j][i].ele)*env.scale_ele
                                              +(ematrix.pw[i][j].vdw + ematrix.pw[j][i].vdw)*env.scale_vdw)/2.0 ;
-           /* proprocessing 
-           if ((ematrix.pw[i][j].vdw + ematrix.pw[j][i].vdw) > 999.0) {
-              pairwise[i][j] = pairwise[j][i] = 999.0;
-           }
-           else {
-              pairwise[i][j] = pairwise[j][i] = ((ematrix.pw[i][j].ele + ematrix.pw[j][i].ele)*env.scale_ele \
-                                                +(ematrix.pw[i][j].vdw + ematrix.pw[j][i].vdw)*env.scale_vdw)/2.0 ;
-           }
-           */
+           
         }
     }
-
-    /* DEBUG print pairwise table 
-    int kr;
-    printf("                ");
-    for (kc=0; kc<conflist.n_conf; kc++) {
-        printf("%16s", conflist.conf[kc].uniqID);
-    }
-    printf("\n");
-    for (kr=0; kr<conflist.n_conf; kr++) {
-        printf("%s ", conflist.conf[kr].uniqID);
-        for (kc=0; kc<conflist.n_conf; kc++) {
-            printf("%16.3f", pairwise[kr][kc]);
-        }
-        printf("\n");
-    }
-    */
-
-    
-    /* free memory */
     free_ematrix(&ematrix);
-
     return 0;
-}
+}*/
+
+
 /////////////////////////////////////////////////////////////////////////////////////
 int AddToArray (ISTATES item,RES *s)
 {
