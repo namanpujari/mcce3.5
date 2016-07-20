@@ -33,12 +33,7 @@ int main(int argc, char *argv[])
    /* Do step 2. rotamers */
    if (env.do_rotamers) {
       printf("Step 2. Make multi side chain conformers\n"); fflush(stdout);
-   if (env.sidechain_opt==1) {//genetic algorithm sidechain packing optimization
-        printf("***Using Pascal Comte's (Brock University-Computer Science,2010) [Paper Ref.: ] Sidechain Packing GA & Bi-directional Evolutionary Sampling***\n");
-        rotamers_GA(argc,argv);
-      }
-
-      else if (rotamers()) {
+      if (rotamers()) {
 		db_close(); return USERERR;
       }
       else printf("Step 2 Done.\n\n");

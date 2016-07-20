@@ -1,11 +1,7 @@
 Update log
 ------------------------------------------------------------------------
-06/2010
+July 2016
 ------------------------------------------------------------------------
-+  In step2, use relative vdw energy for the conformer vdw prune
-------------------------------------------------------------------------
-06-18-2010
-+  don't add the above to mcce2.5, need more tests.
-+  now depth, only consider delphi, so apbs has the same del_run
-   since only use the delphi_grid
-   need to add apbs_grid later, although they are the same now.
+- Removed PASCAL COMTE GENETIC ALGORITHM from this version
++ Yifan's monte carlo no longer needs step3_out.pdb directory (fixed)
+

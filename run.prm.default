@@ -1,4 +1,4 @@
-MCCE CONFIGURATION FILE (default 09/15/2004)
+MCCE CONFIGURATION FILE (default July 2016)
    This file must have name "run.prm" in the working directory. The first
    field of the line is the value, and last string with parenthesis is
    the key.
@@ -143,27 +143,3 @@ sdh   type of PBE boundary condition: zero/sdh/mdh/focus      (BOUND_COND_APBS)
 
 ##############################################################################
 
-###########PASCAL COMTE GENETIC ALGORITHM PARAMETERS FOR STEP 2################
--1       Random seed value, use -1 for random value         (GA_SEED)
-6000     Population size of each GA: use up to 20k          (GA_POP_SIZE)
-0.1      Mutation rate for each GA                          (GA_MUTATION_RATE)
-0.0      Migration rate for each GA                         (GA_MIGRATION_RATE)
-0.9      Crossover rate for each GA                         (GA_CROSSOVER_RATE)
-30       Max nb. of rnd cut points for crossover            (GA_RANDOM_CUT_POINTS)
-
-10       Nb. of GA rounds without convergence check         (GA_PHASE)
-5        Nb. of GA rounds with convergence check            (GA_SHIFT)
-
-15.0     Distribution Center                                (GA_DIST_CENTER)
-2.0      solutions within EPS*DIST.CENTER in bucket         (GA_DIST_CENTER_EPS)
-
-400000   Max nb. protein conformations in final bucket      (GA_MAX_BUCKET_POP)
-5.0      Local Residue lowest occupied energy cutoff        (GA_RESIDUE_MIN_ENERGY_CUTOFF)
-0.0      Occupied conformers in MIN_ENRG_CUTOFF are deleted (GA_OCCUPANCY_CUTOFF)
-0.7      Pop. %  for dE calculation                         (GA_DELTA_E)
-
--1       Disabled when -1                                   (GA_SPHERE_FOCUS_RESID)
-20.0     Up to how many Angstorms to include residues       (GA_SPHERE_PROBE_RADIUS)
-
-0        GA output format: 0 display screen, 1 file         (GA_OUTPUT)
-##############################################################################
