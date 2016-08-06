@@ -16,4 +16,4 @@
 #$ -e error.log
 
 # Now comes the commands to be executed
-/home/mcce/mcce2.5.1/mcce
+/home/mcce/mcce3.5/mcce
