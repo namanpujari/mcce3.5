@@ -98,7 +98,7 @@ void welcome()
    printf("|		  October 2015, by MCCE Development Team      |\n");
    printf("|							      |\n");
    printf("|_________________________        ____________________________|\n");
-   printf("                          MCCE 3.0                          \n\n");
+   printf("                          MCCE 3.5                          \n\n");
    printf("Last Updates:                                              \n");
    printf("July 2016, Yifan's monte carlo no longer needs step3_out.pdb directory (fixed)\n");
    printf("July 2016, Removed PASCAL COMTE GENETIC ALGORITHM from this version\n");
