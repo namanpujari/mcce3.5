@@ -70,6 +70,7 @@ int main(int argc, char *argv[])
 
 void welcome()
 { 
+   printf("Aug 2016:marilyn was here\n");
    printf(" _________________________MCCE 3.5____________________________\n");
    printf("|	   						      |\n");
    printf("|    MCCE (Multi-Conformation Continuum Electrostatics)       |\n");
