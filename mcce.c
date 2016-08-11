@@ -70,6 +70,7 @@ int main(int argc, char *argv[])
 
 void welcome()
 { 
+   printf("Aug 2016:marilyn was here\n");
    printf(" _________________________MCCE 3.5____________________________\n");
    printf("|	   						      |\n");
    printf("|    MCCE (Multi-Conformation Continuum Electrostatics)       |\n");
@@ -102,13 +103,6 @@ void welcome()
    printf("Last Updates:                                              \n");
    printf("July 2016, Yifan's monte carlo no longer needs step3_out.pdb directory (fixed)\n");
    printf("July 2016, Removed PASCAL COMTE GENETIC ALGORITHM from this version\n");
-
-
-
-
-
-
-   printf("Aug 2016:marilyn was here\n");
    fflush(stdout);
 	
 	// Added by Jessica on Nov. 2015
