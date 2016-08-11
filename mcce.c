@@ -75,6 +75,7 @@ void welcome()
    printf("|    MCCE (Multi-Conformation Continuum Electrostatics)       |\n");
    printf("|	is a program developed at Marilyn Gunner's lab.	      |\n");
    printf("|	MCCE is a biophysics simulation program combining     |\n");
+   printf("|    I'm Manoj      |\n");
    printf("|	continuum electrostatics and molecular mechanics.     |\n");
    printf("|	In this program, the protein side chain motions are   |\n");
    printf("|	simulated explicitly while the dielectric effect of   |\n");
