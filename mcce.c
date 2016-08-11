@@ -105,8 +105,7 @@ void welcome()
    
    printf("August 2016 Witek\n");
    fflush(stdout);
-	
-	// Added by Jessica on Nov. 2015
+
    char buf[LEN];
    time_t curtime;
    struct tm *loc_time;
