@@ -51,14 +51,16 @@ int main(int argc, char *argv[])
 
    /* Do step 4. Monte Carlo */
    if (env.do_monte) {
-      printf("Step 4. Monte Carlo Sampling\n"); fflush(stdout);
+      
       if (!env.monte_adv_opt) {
+      printf("Step 4. Standard Monte Carlo Sampling\n"); fflush(stdout);
       if (monte()) {db_close(); return USERERR;}
            else printf("Step 4 Done.\n\n");
-       }
+      }
        else {
-           if (monte2()) {db_close(); return USERERR;}
-           else printf("Step 4 Done.\n\n");
+         printf("Step 4. Yifan Monte Carlo Sampling\n"); fflush(stdout);
+         if (monte2()) {db_close(); return USERERR;}
+         else printf("Step 4 Done.\n\n");
        }
    }
    else printf("Not doing \"Step 4. Monte Carlo Sampling\"\n\n");

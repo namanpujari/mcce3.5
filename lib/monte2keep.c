@@ -1203,7 +1203,7 @@ int monte_out(PROT prot, int n_titra) {
     }
     else {
         fprintf(fp, " Eh       ");
-        for (i=0; i<n_titra; i++) fprintf(fp, " %5.1f", env.titr_eh0+i*env.titr_ehd);
+        for (i=0; i<n_titra; i++) fprintf(fp, " %5.0f", env.titr_eh0+i*env.titr_ehd);
     }
     fprintf(fp, "\n");
 
