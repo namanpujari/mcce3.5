@@ -66,7 +66,7 @@ typedef struct {
    CONFTYPE *conftype;
 }  TYPES;
 
-/* public variables */
+// public variables 
 PROT     prot;
 RES      conflist, conflist_bak;
 float    **pairwise, **pairwise_vdw, **pairwise_ele;
@@ -1382,22 +1382,25 @@ int fitit()
     for (i=0; i<Nx; i++) fprintf(fp, " %5d", (int) xp[i]);
     fprintf(fp, "\n");
 
+    // N_res is the number of charged res
     for(i=0; i<N_res; i++) {
         fprintf(fp, "%s", shead[i]);
         strncpy(sbuff, shead[i], 4); sbuff[4] = '1'; sbuff[5] = '\0';
         if (param_get( "PROTON", sbuff, "", &n_protons)) n_protons = 0;
         if (param_get( "ELECTRON", sbuff, "", &n_electrons)) n_electrons = 0;
-        /* n_crg = n_protons-n_electrons; */
+        // n_crg = n_protons-n_electrons; 
         n_crg = n_protons-n_electrons; 
         
-        /* number of protons on ground conformer type */
+        // number of protons on ground conformer type 
         strncpy(sbuff, shead[i], 3); sbuff[3] = '0'; sbuff[4] = '1'; sbuff[5] = '\0';
         if (param_get( "PROTON", sbuff, "", &n_protons_grnd)) n_protons_grnd = 0;
         if (param_get( "ELECTRON", sbuff, "", &n_electrons_grnd)) n_electrons_grnd = 0;
         n_crg_grnd = n_protons_grnd - n_electrons_grnd;
         
+        // Nx is number of titration points
         for(j=0; j<Nx; j++) {
             fprintf(fp, " %5.2f", n_crg*ysp[i][j]);
+            //fprintf(fp, " %5.2f%5.2f", n_crg,ysp[i][j]);
             mfe_res[i].mfe.crg[j] = n_crg*ysp[i][j] + n_crg_grnd*(1.0-ysp[i][j]);
             for (k=0; k<n_all; k++) {
                 strncpy(sbuff, conflist.conf[all_res[k].conf[0]].uniqID, 3); sbuff[3] = '\0';
@@ -1587,9 +1590,9 @@ float fround3(float x)
 
     sprintf(sbuff, "%.3f", x);
     y=atof(sbuff);
-//    if (x>0.0000001) return (int)(x*1000+0.5)/1000.0;
-//    if (x<-0.0000001) return -(int)(-x*1000+0.5)/1000.0;
-//    else return 0.000;
+    //    if (x>0.0000001) return (int)(x*1000+0.5)/1000.0;
+    //    if (x<-0.0000001) return -(int)(-x*1000+0.5)/1000.0;
+    //    else return 0.000;
     return y;
 
 }
