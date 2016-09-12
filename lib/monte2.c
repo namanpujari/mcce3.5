@@ -26,7 +26,7 @@ GROUP     **flip_group;
 long    idum;
 double  beta;
 ISTATES *TheArray;
-char **shead;
+char **shead2;
 
 int monte2() {
     // printf("monte2 I added the entropy correction function\n");
@@ -1078,21 +1078,24 @@ double free_unf(PROT prot) {
 }
 
 int Nx;       /* number of titration points */
-float *xp, *yp;   /* titration points */
+float *xp2, *yp2;   /* titration points */
 
 int monte_out(PROT prot, int n_titra) {
     FILE *fp;
-    int  N_crg, N_res, n_crg, j, Counter, i, ic, i_titra, i_res, i_conf;
+    int  N_crg, N_res, j, Counter, i, ic, i_titra, i_res, i_conf;
+    int n_protons, n_electrons, n_crg;
+    int n_protons_grnd, n_electrons_grnd, n_crg_grnd;
     float H, e;
     char line[20];
-    char **head, **mhead;  // add mhead for mfe header
-    float **ypp, **ysp;
+    char **head2, **mhead;  // add mhead for mfe header
+    float **ypp2, **ysp2;
     //int Nx;       /* number of titration points */
-    float *xp, *yp;   /* titration points */
+    float *xp2, *yp2;   /* titration points */
     float    **occ_table;   /* occ of conformers at various pH/Eh */
     float *netcrg;
     float *new_netcrg;
-
+    float *crg, *protons, *electrons;    /* total net charge at pHs */
+    char sbuff[21];
 
     /* writing occ table */
     if (!(fp = fopen(OCC_TABLE, "w"))) {
@@ -1122,24 +1125,24 @@ int monte_out(PROT prot, int n_titra) {
     Nx = env.titr_steps;
     
 
-    head = (char **) malloc(prot.nc * sizeof(char *));
-    for (i=0; i<prot.nc; i++) head[i] = (char *) malloc(20 * sizeof(char));
-    shead = (char **) malloc(prot.nc * sizeof(char *));
-    for (i=0; i<prot.nc; i++) shead[i] = (char *) malloc(20 * sizeof(char));
+    head2 = (char **) malloc(prot.nc * sizeof(char *));
+    for (i=0; i<prot.nc; i++) head2[i] = (char *) malloc(20 * sizeof(char));
+    shead2 = (char **) malloc(prot.nc * sizeof(char *));
+    for (i=0; i<prot.nc; i++) shead2[i] = (char *) malloc(20 * sizeof(char));
     mhead = (char **) malloc(prot.nc * sizeof(char *));
     for (i=0; i<prot.nc; i++) mhead[i] = (char *) malloc(20 * sizeof(char));
     netcrg = (float *) malloc(prot.nc*sizeof(float));
     new_netcrg = (float *) malloc(prot.nc*sizeof(float));
 
     /*--- Assign titration points to an array ---*/
-    xp = (float *) malloc(Nx * sizeof(float));      /* store x points */
-    yp = (float *) malloc(Nx * sizeof(float));      /* store y points */
-    ypp = (float **) malloc(prot.nc * sizeof(float *));
-    for (i=0; i<prot.nc; i++) ypp[i] = (float *) malloc(Nx * sizeof(float));
-    ysp = (float **) malloc(prot.nc * sizeof(float *));
-    for (i=0; i<prot.nc; i++) ysp[i] = (float *) malloc(Nx * sizeof(float));
+    xp2 = (float *) malloc(Nx * sizeof(float));      /* store x points */
+    yp2 = (float *) malloc(Nx * sizeof(float));      /* store y points */
+    ypp2 = (float **) malloc(prot.nc * sizeof(float *));
+    for (i=0; i<prot.nc; i++) ypp2[i] = (float *) malloc(Nx * sizeof(float));
+    ysp2 = (float **) malloc(prot.nc * sizeof(float *));
+    for (i=0; i<prot.nc; i++) ysp2[i] = (float *) malloc(Nx * sizeof(float));
 
-
+    
     //<<< Group into residues >>>
     // keep only charged conformers 
     Counter = 0;
@@ -1147,51 +1150,58 @@ int monte_out(PROT prot, int n_titra) {
     // Loop through all the conf in prot
     for (i=0; i <prot.nc; i++) {
         if (strchr(prot.conf[i]->uniqID, '+') || strchr(prot.conf[i]->uniqID, '-')) {
-            strncpy(head[Counter], prot.conf[i]->uniqID, 5); // copies up to 5 characters from the string pointed to, by prot.conf[i]->uniqID to dest head[Counter]
-            head[Counter][5] = '\0';
-            strncat(head[Counter], prot.conf[i]->uniqID+5, 8); // appends the string pointed to by prot.conf[i]->uniqID+5 to the end of the string pointed to by head[Counter] up to 8 characters long
-            head[Counter][11] = '\0';
+            strncpy(head2[Counter], prot.conf[i]->uniqID, 5); // copies up to 5 characters from the string pointed to, by prot.conf[i]->uniqID to dest head[Counter]
+            head2[Counter][5] = '\0';
+            strncat(head2[Counter], prot.conf[i]->uniqID+5, 8); // appends the string pointed to by prot.conf[i]->uniqID+5 to the end of the string pointed to by head[Counter] up to 8 characters long
+            head2[Counter][11] = '\0';
             //printf("uniqID %s has charge of %5.2f\n",head[Counter],prot.conf[i]->netcrg);
             new_netcrg[Counter] = prot.conf[i]->netcrg; // This is the same as of column 5 in head3.lst
             for (i_titra=0; i_titra<n_titra; i_titra++) {
-                ypp[Counter][i_titra] = prot.conf[i]->occ_table[i_titra];
+                ypp2[Counter][i_titra] = prot.conf[i]->occ_table[i_titra];
             } 
             Counter++;
         }
     }
     N_crg = Counter;
 
-
+    
     // group residues 
     // Nx is number of titration points
     
     Counter = 0;
-    strncpy(line, head[0], 11);
+    strncpy(line, head2[0], 11);
     netcrg[0] = new_netcrg[0];
     
     for (i_titra=0; i_titra<n_titra; i_titra++) {
-        ysp[0][i_titra] = ypp[0][i_titra];
+        ysp2[0][i_titra] = ypp2[0][i_titra];
     }
 
     for (i=1; i<N_crg; i++) {
-        if (strncmp(head[i], line, 11)) {      // not equal, a new residue // compares at most the first 11 bytes of head[i] and line
-            strncpy(shead[Counter], line, 11); 
-            shead[Counter][11] = '\0';
+        if (strncmp(head2[i], line, 11)) {      // not equal, a new residue // compares at most the first 11 bytes of head[i] and line
+            strncpy(shead2[Counter], line, 11); 
+            shead2[Counter][11] = '\0';
             Counter++;
-            strncpy(line, head[i], 11);
+            strncpy(line, head2[i], 11);
             netcrg[Counter] = new_netcrg[i];
-            for (i_titra=0; i_titra<n_titra; i_titra++) ysp[Counter][i_titra] = ypp[i][i_titra];
+            for (i_titra=0; i_titra<n_titra; i_titra++) ysp2[Counter][i_titra] = ypp2[i][i_titra];
         }
         else {                                 // same residue
-            for (i_titra=0; i_titra<n_titra; i_titra++) ysp[Counter][i_titra] += ypp[i][i_titra];
+            for (i_titra=0; i_titra<n_titra; i_titra++) ysp2[Counter][i_titra] += ypp2[i][i_titra];
         }
     }
 
-    strncpy(shead[Counter], line, 11); 
-    shead[Counter][11] = '\0';
+    strncpy(shead2[Counter], line, 11); 
+    shead2[Counter][11] = '\0';
     N_res = Counter + 1;
     
-    
+    crg       = (float *) malloc(Nx * sizeof(float));
+    protons   = (float *) malloc(Nx * sizeof(float));
+    electrons = (float *) malloc(Nx * sizeof(float));
+
+    memset(crg, 0, Nx * sizeof(float));
+    memset(protons, 0, Nx * sizeof(float));
+    memset(electrons, 0, Nx * sizeof(float));
+
     // writing sum_crg 
     if (!(fp = fopen(TOT_CRG, "w"))) {
         printf("   FATAL: Can not write sumcrg to file \"%s\"\n", OCC_TABLE);fflush(stdout);
@@ -1206,70 +1216,66 @@ int monte_out(PROT prot, int n_titra) {
         for (i=0; i<n_titra; i++) fprintf(fp, " %5.1f", env.titr_eh0+i*env.titr_ehd);
     }
     fprintf(fp, "\n");
-
+    
     for (i_res=0;i_res<N_res; i_res++) {
-        H = prot.res[i_res].conf[1].H;
-        e = prot.res[i_res].conf[1].e;
-        fprintf(fp, "%s", shead[i_res]);
+        fprintf(fp, "%s", shead2[i_res]);
+        strncpy(sbuff, shead2[i_res], 4); sbuff[4] = '1'; sbuff[5] = '\0';
+        if (param_get( "PROTON", sbuff, "", &n_protons)) n_protons = 0;
+        if (param_get( "ELECTRON", sbuff, "", &n_electrons)) n_electrons = 0;
+        /* n_crg = n_protons-n_electrons; */
+        n_crg = n_protons-n_electrons; 
+        
+        /* number of protons on ground conformer type */
+        strncpy(sbuff, shead2[i_res], 3); sbuff[3] = '0'; sbuff[4] = '1'; sbuff[5] = '\0';
+        if (param_get( "PROTON", sbuff, "", &n_protons_grnd)) n_protons_grnd = 0;
+        if (param_get( "ELECTRON", sbuff, "", &n_electrons_grnd)) n_electrons_grnd = 0;
+        n_crg_grnd = n_protons_grnd - n_electrons_grnd;
+
         for (i_titra=0; i_titra<n_titra; i_titra++) {
             //fprintf(fp, " %5.2f", prot.res[i_res].sum_crg[i_titra]);
-            //printf("three: %s %5.2f\n", shead[i_res],new_netcrg[i_res]);
-            fprintf(fp, " %5.2f", netcrg[i_res]*ysp[i_res][i_titra]);
+            //printf("three: %s %5.2f\n", shead2[i_res],new_netcrg[i_res]);
+            fprintf(fp, " %5.2f", netcrg[i_res]*ysp2[i_res][i_titra]);
+            crg[i_titra] += netcrg[i_res]*ysp2[i_res][i_titra];
+            protons[i_titra] += n_protons*ysp2[i_res][i_titra] + n_protons_grnd*(1.0-ysp2[i_res][i_titra]);
+            electrons[i_titra] += n_electrons*ysp2[i_res][i_titra] + n_electrons_grnd*(1.0-ysp2[i_res][i_titra]);
         }
+        
         fprintf(fp, "\n");
     }
     
     
-    prot.H = malloc(n_titra*sizeof(float));
-    memset(prot.H,0,n_titra*sizeof(float));
-    prot.e = malloc(n_titra*sizeof(float));
-    memset(prot.e,0,n_titra*sizeof(float));
-    prot.sum_crg = malloc(n_titra*sizeof(float));
-    memset(prot.sum_crg,0,n_titra*sizeof(float));
-    
-    for (i_titra=0; i_titra<n_titra; i_titra++) {
-        for (i_res=0;i_res<prot.n_res;i_res++) {
-            for (i_conf=1;i_conf<prot.res[i_res].n_conf;i_conf++) {
-                prot.H[i_titra] += prot.res[i_res].conf[i_conf].occ_table[i_titra] * prot.res[i_res].conf[i_conf].H;
-                prot.e[i_titra] += prot.res[i_res].conf[i_conf].occ_table[i_titra] * prot.res[i_res].conf[i_conf].e;
-                prot.sum_crg[i_titra] += prot.res[i_res].conf[i_conf].occ_table[i_titra] * prot.res[i_res].conf[i_conf].netcrg;
-            }
-        }
-    }
-    
-    
-    
-    
     fprintf(fp, "----------\n");
-    
     fprintf(fp, "Tot Protn");
-    for (i_titra=0; i_titra<n_titra; i_titra++) {
-        fprintf(fp, " %5.2f", prot.H[i_titra]);
+    for(j=0; j<Nx; j++) {
+        fprintf(fp, " %5.2f", protons[j]);
     }
     fprintf(fp, "\n");
     fprintf(fp, "Tot Elec ");
-    for (i_titra=0; i_titra<n_titra; i_titra++) {
-        fprintf(fp, " %5.2f", prot.e[i_titra]);
+    for(j=0; j<Nx; j++) {
+        fprintf(fp, " %5.2f", electrons[j]);
     }
     fprintf(fp, "\n");
     fprintf(fp, "Net crg  ");
-    for (i_titra=0; i_titra<n_titra; i_titra++) {
-        fprintf(fp, " %5.2f", prot.sum_crg[i_titra]);
+    for(j=0; j<Nx; j++) {
+        fprintf(fp, " %5.2f", crg[j]);
     }
     fprintf(fp, "\n");
     
     fclose(fp);
 
-    free(xp);
-    free(yp);
-    for (i=0; i<prot.n_res; i++) free(ypp[i]);
-    free(ypp);
-    for (i=0; i<prot.n_res; i++) free(ysp[i]);
-    free(ysp);
-    for (i=0; i<prot.n_res; i++) free(head[i]);
-    free(head);
-    for (i=0; i<prot.n_res; i++) free(shead[i]);
-    free(shead);
+    free(crg);
+    free(protons);
+    free(electrons);
+    free(xp2);
+    free(yp2);
+    for (i=0; i<prot.nc; i++) free(ypp2[i]);
+    free(ypp2);
+    for (i=0; i<prot.nc; i++) free(ysp2[i]);
+    free(ysp2);
+    for (i=0; i<prot.nc; i++) free(head2[i]);
+    free(head2);
+    for (i=0; i<prot.nc; i++) free(shead2[i]);
+    free(shead2);
     return 0;
 }
 
