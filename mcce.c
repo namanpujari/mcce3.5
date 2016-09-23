@@ -51,14 +51,16 @@ int main(int argc, char *argv[])
 
    /* Do step 4. Monte Carlo */
    if (env.do_monte) {
-      printf("Step 4. Monte Carlo Sampling\n"); fflush(stdout);
+      
       if (!env.monte_adv_opt) {
+      printf("Step 4. Standard Monte Carlo Sampling\n"); fflush(stdout);
       if (monte()) {db_close(); return USERERR;}
            else printf("Step 4 Done.\n\n");
-       }
+      }
        else {
-           if (monte2()) {db_close(); return USERERR;}
-           else printf("Step 4 Done.\n\n");
+         printf("Step 4. Yifan Monte Carlo Sampling\n"); fflush(stdout);
+         if (monte2()) {db_close(); return USERERR;}
+         else printf("Step 4 Done.\n\n");
        }
    }
    else printf("Not doing \"Step 4. Monte Carlo Sampling\"\n\n");
@@ -104,8 +106,12 @@ void welcome()
    printf("Last Updates:                                              \n");
    printf("July 2016, Yifan's monte carlo no longer needs step3_out.pdb directory (fixed)\n");
    printf("July 2016, Removed PASCAL COMTE GENETIC ALGORITHM from this version\n");
+<<<<<<< HEAD
    
    printf("August 2016 Witek\n");
+=======
+   printf("Sept 2016, Added charged ligands to sum_crg.out.\n");
+>>>>>>> 4ad41cfb486795d299d0734c9129022895f4c418
    fflush(stdout);
 
    char buf[LEN];

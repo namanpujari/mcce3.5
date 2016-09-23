@@ -66,7 +66,7 @@ typedef struct {
    CONFTYPE *conftype;
 }  TYPES;
 
-// public variables 
+/* public variables */
 PROT     prot;
 RES      conflist, conflist_bak;
 float    **pairwise, **pairwise_vdw, **pairwise_ele;
@@ -99,7 +99,8 @@ float get_E();
 void  mk_neighbors();
 void MC(int n);
 int reduce_conflist();
-int fitit();
+PROT monte_load_conflist(char *fname);
+int fitit(PROT prot2);
 int enumerate(int i_ph_eh);
 int load_conflist();
 int group_conftype();
@@ -116,13 +117,14 @@ int monte()
     float *sigma, sigma_max, t;
     int N_smp;
     float S_max;
-    
+    PROT prot2;
     timerA = time(NULL);
 
     /* Load conformer list from FN_CONFLIST3 */
     printf("   Load conformer list from file \"%s\" ...\n", FN_CONFLIST3);
     fflush(stdout);
     prot = new_prot();
+    prot2 = monte_load_conflist(FN_CONFLIST3);
     load_conflist();
     if (conflist.n_conf == 0) {
         printf("   FATAL: error in reading conformer list %s", FN_CONFLIST3);
@@ -231,7 +233,6 @@ int monte()
         
         /* get big list */
         mk_neighbors();
-        
         /* Compute base energy, self and mfe */
         E_base = get_base();
         
@@ -280,10 +281,8 @@ int monte()
         group_confs();
         fprintf(fp, "%d free residues from %d residues, after reduction.\n\n", n_free, n_all);
         fflush(fp);
-        
         /* reset */
         mk_neighbors();
-
         j = 0; S_max = 999.9;
         for (k=0; k<Sconverge.n; k++) SconvergeBak.conftype[k].E_TS = 0.0;
         if (env.monte_tsx) {
@@ -458,7 +457,7 @@ int monte()
     /* curve fitting */
     printf("   Fit titration curves to get pKa/Em ...\n");
     fflush(stdout);
-    if (fitit()) {
+    if (fitit(prot2)) {
         printf("   Fatal error detected in fitting program.\n");
         return USERERR;
     }
@@ -1211,7 +1210,100 @@ struct STAT fit(float a, float b);
 float score(float v[]);
 void dhill(float **p, float *y, int ndim, float ftol, float (*funk)(float []), int *nfunk);
 
-int fitit()
+PROT monte_load_conflist(char *fname) {
+    PROT prot;
+    FILE *fp;
+    char sbuff[MAXCHAR_LINE];
+    char stemp[MAXCHAR_LINE];
+    CONF conf;
+    int  k_res, k_conf;
+    
+    memset(&prot,0,sizeof(PROT));
+    if (!(fp=fopen(fname, "r"))) {
+        printf("   FATAL: Can't open file %s\n", fname);fflush(stdout);
+        return prot;
+    }
+    
+    fgets(sbuff, sizeof(sbuff), fp); /* skip the first line */
+    
+    while(fgets(sbuff, sizeof(sbuff), fp)) {
+        if (strlen(sbuff) < 20) continue;
+        
+        /*
+        iConf CONFORMER     FL  occ    crg   Em0  pKa0 ne nH    vdw0    vdw1    tors    epol   dsolv   extra    self
+        01234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
+        00001 NTR01_0001_001 f 0.00  0.000     0  0.00  0  0  -0.002   1.335   0.000   0.005   0.000   0.000 01O000M000t
+        */
+        
+        /* load this line to a conf */
+        memset(&conf,0,sizeof(CONF));
+        strncpy(stemp, sbuff,    5); stemp[5] = '\0'; conf.i_conf_prot = atoi(stemp);
+        strncpy(conf.uniqID, sbuff+6, 14); conf.uniqID[14]  = '\0';
+        conf.toggle = sbuff[21];
+        strncpy(stemp, sbuff+23, 4); stemp[4] = '\0'; conf.occ     = atof(stemp);
+        strncpy(stemp, sbuff+28, 6); stemp[6] = '\0'; conf.netcrg  = atof(stemp);
+        strncpy(stemp, sbuff+35, 5); stemp[5] = '\0'; conf.Em      = atof(stemp);
+        strncpy(stemp, sbuff+41, 5); stemp[5] = '\0'; conf.pKa     = atof(stemp);
+        strncpy(stemp, sbuff+47, 2); stemp[2] = '\0'; conf.e       = atof(stemp);
+        strncpy(stemp, sbuff+50, 2); stemp[2] = '\0'; conf.H       = atof(stemp);
+        strncpy(stemp, sbuff+53, 7); stemp[7] = '\0'; conf.E_vdw0  = atof(stemp) * env.scale_vdw0;
+        strncpy(stemp, sbuff+61, 7); stemp[7] = '\0'; conf.E_vdw1  = atof(stemp) * env.scale_vdw1;
+        strncpy(stemp, sbuff+69, 7); stemp[7] = '\0'; conf.E_tors  = atof(stemp) * env.scale_tor;
+        strncpy(stemp, sbuff+77, 7); stemp[7] = '\0'; conf.E_epol  = atof(stemp) * env.scale_ele;
+        strncpy(stemp, sbuff+85, 7); stemp[7] = '\0'; conf.E_dsolv  = atof(stemp)* env.scale_dsolv;
+        strncpy(stemp, sbuff+93, 7); stemp[7] = '\0'; conf.E_extra  = atof(stemp);
+        strncpy(conf.history, sbuff+101, 11); conf.history[11]  = '\0';
+
+        strncpy(conf.resName,  conf.uniqID, 3); conf.resName[3] = '\0';
+        strncpy(conf.confName, conf.uniqID, 5); conf.confName[5] = '\0';
+        conf.chainID = conf.uniqID[5];
+        strncpy(stemp, conf.uniqID+6, 4); stemp[4] = '\0'; conf.resSeq = atoi(stemp);
+        conf.iCode = conf.uniqID[10];
+
+        /* search for the residue: using same procedure as in load_pdb() */
+        for (k_res = prot.n_res - 1; k_res >= 0; k_res--) {
+            if (!strcmp(conf.resName, prot.res[k_res].resName) &&
+                conf.chainID == prot.res[k_res].chainID &&
+            conf.resSeq  == prot.res[k_res].resSeq  &&
+            conf.iCode   == prot.res[k_res].iCode  )
+            {
+                break;
+            }
+        }
+        /* If couldn't find the residue, add a new one */
+        if (k_res == -1) {
+            k_res = ins_res(&prot, prot.n_res);
+            strcpy(prot.res[k_res].resName, conf.resName);
+            prot.res[k_res].chainID = conf.chainID;
+            prot.res[k_res].resSeq  = conf.resSeq;
+            prot.res[k_res].iCode   = conf.iCode;
+            
+            /* Insert a backbone conformer */
+            ins_conf(&prot.res[k_res], 0, 0);
+        }
+        
+        k_conf = ins_conf(&prot.res[k_res], prot.res[k_res].n_conf, 0);
+        prot.res[k_res].conf[k_conf] = conf;
+        if (conf.toggle == 't') prot.res[k_res].conf[k_conf].toggle = 'f';
+        else if (conf.toggle == 'f') prot.res[k_res].conf[k_conf].toggle = 't';
+        else if (conf.toggle == 'a') prot.res[k_res].conf[k_conf].toggle = 'a';
+        else prot.res[k_res].conf[k_conf].toggle = 't';
+    }
+    fclose(fp);
+    
+    for (k_res=0;k_res<prot.n_res;k_res++) {
+        for (k_conf=1;k_conf<prot.res[k_res].n_conf;k_conf++) {
+            prot.nc++;
+            prot.conf = realloc(prot.conf, prot.nc*sizeof(void *));
+            prot.res[k_res].conf[k_conf].i_conf_prot = prot.nc-1;
+            prot.conf[prot.res[k_res].conf[k_conf].i_conf_prot] = &prot.res[k_res].conf[k_conf];
+        }
+    }
+    return prot;
+}
+
+
+int fitit(PROT prot2)
 {  int i, j;
     int N_crg;
     int N_res;
@@ -1220,6 +1312,7 @@ int fitit()
     struct STAT stat;	/* a structure of statistcs */
     char **head, **mhead;  // add mhead for mfe header
     float *netcrg;
+    float *new_netcrg;
     float **ypp, **ysp;
     float a, b, mid;
     float *crg, *protons, *electrons;    /* total net charge at pHs */
@@ -1257,15 +1350,17 @@ int fitit()
     mhead = (char **) malloc(conflist.n_conf * sizeof(char *));
     for (i=0; i<conflist.n_conf; i++) mhead[i] = (char *) malloc(20 * sizeof(char));
     netcrg = (float *) malloc(conflist.n_conf*sizeof(float));
-
+    new_netcrg = (float *) malloc(conflist.n_conf*sizeof(float));
     /*<<< Group into residues >>>*/
     /* keep only charged conformers */
     Counter = 0;
     for (i=0; i <conflist.n_conf; i++) {
         if (strchr(conflist.conf[i].uniqID, '+') || strchr(conflist.conf[i].uniqID, '-')) {
-            strncpy(head[Counter], conflist.conf[i].uniqID, 4); head[Counter][4] = '\0';
-            strncat(head[Counter], conflist.conf[i].uniqID+5, 6);
-            head[Counter][10] = '\0';
+            strncpy(head[Counter], conflist.conf[i].uniqID, 5); 
+            head[Counter][5] = '\0';
+            strncat(head[Counter], conflist.conf[i].uniqID+5, 8);
+            head[Counter][11] = '\0';
+            new_netcrg[Counter] = prot2.conf[i]->netcrg; // This is the same as of column 5 in head3.lst
             for (j=0; j<Nx; j++) {
                 ypp[Counter][j] = occ_table[i][j];
             }
@@ -1277,20 +1372,26 @@ int fitit()
 
     /* group residues */
     Counter = 0;
-    strncpy(line, head[0], 10);
+    strncpy(line, head[0], 11);
+    netcrg[0] = new_netcrg[0];
+
     for (j=0; j<Nx; j++) ysp[0][j] = ypp[0][j];
+
     for (i=1; i<N_crg; i++) {
-        if (strncmp(head[i], line, 10)) {      /* not equal, a new residue */
-            strncpy(shead[Counter], line, 10); shead[Counter][10] = '\0';
+        if (strncmp(head[i], line, 11)) {      /* not equal, a new residue */
+            strncpy(shead[Counter], line, 11); 
+            shead[Counter][11] = '\0';
             Counter++;
-            strncpy(line, head[i], 10);
+            strncpy(line, head[i], 11);
+            netcrg[Counter] = new_netcrg[i];
             for (j=0; j<Nx; j++) ysp[Counter][j] = ypp[i][j];
         }
         else {                                 /* same residue */
             for (j=0; j<Nx; j++) ysp[Counter][j] += ypp[i][j];
         }
     }
-    strncpy(shead[Counter], line, 10); shead[Counter][10] = '\0';
+    strncpy(shead[Counter], line, 11); 
+    shead[Counter][11] = '\0';
     N_res = Counter + 1;
     
     n_mfe = N_res;
@@ -1379,28 +1480,26 @@ int fitit()
     else {      /* Eh titration assumed */
         fprintf(fp, "  Eh      ");
     }
-    for (i=0; i<Nx; i++) fprintf(fp, " %5d", (int) xp[i]);
+    for (i=0; i<Nx; i++) fprintf(fp, " %5.1f", (int) xp[i]);
     fprintf(fp, "\n");
 
-    // N_res is the number of charged res
     for(i=0; i<N_res; i++) {
         fprintf(fp, "%s", shead[i]);
         strncpy(sbuff, shead[i], 4); sbuff[4] = '1'; sbuff[5] = '\0';
         if (param_get( "PROTON", sbuff, "", &n_protons)) n_protons = 0;
         if (param_get( "ELECTRON", sbuff, "", &n_electrons)) n_electrons = 0;
-        // n_crg = n_protons-n_electrons; 
+        /* n_crg = n_protons-n_electrons; */
         n_crg = n_protons-n_electrons; 
         
-        // number of protons on ground conformer type 
+        /* number of protons on ground conformer type */
         strncpy(sbuff, shead[i], 3); sbuff[3] = '0'; sbuff[4] = '1'; sbuff[5] = '\0';
         if (param_get( "PROTON", sbuff, "", &n_protons_grnd)) n_protons_grnd = 0;
         if (param_get( "ELECTRON", sbuff, "", &n_electrons_grnd)) n_electrons_grnd = 0;
         n_crg_grnd = n_protons_grnd - n_electrons_grnd;
         
-        // Nx is number of titration points
         for(j=0; j<Nx; j++) {
-            fprintf(fp, " %5.2f", n_crg*ysp[i][j]);
-            //fprintf(fp, " %5.2f%5.2f", n_crg,ysp[i][j]);
+            //fprintf(fp, " %5.2f", n_crg*ysp[i][j]);
+            fprintf(fp, " %5.2f", netcrg[i]*ysp[i][j]);
             mfe_res[i].mfe.crg[j] = n_crg*ysp[i][j] + n_crg_grnd*(1.0-ysp[i][j]);
             for (k=0; k<n_all; k++) {
                 strncpy(sbuff, conflist.conf[all_res[k].conf[0]].uniqID, 3); sbuff[3] = '\0';
@@ -1408,7 +1507,7 @@ int fitit()
                 // get all the charges of all the residues
                 if (!strcmp(sbuff, mhead[i])) all_res[k].mfe.crg[j] = n_crg*ysp[i][j] + n_crg_grnd*(1.0-ysp[i][j]);
             }    
-            crg[j] += n_crg*ysp[i][j] + n_crg_grnd*(1.0-ysp[i][j]);
+            crg[j] += netcrg[i]*ysp[i][j]; //n_crg*ysp[i][j] + n_crg_grnd*(1.0-ysp[i][j]);
             protons[j] += n_protons*ysp[i][j] + n_protons_grnd*(1.0-ysp[i][j]);
             electrons[j] += n_electrons*ysp[i][j] + n_electrons_grnd*(1.0-ysp[i][j]);
         }
@@ -1417,23 +1516,26 @@ int fitit()
 
     fprintf(fp, "----------\n");
 
-    fprintf(fp, "Net_Charge");
+    fprintf(fp, "Tot Protn");
+    for(j=0; j<Nx; j++) {
+        fprintf(fp, " %5.2f", protons[j]);
+    }
+    fprintf(fp, "\n");
+    fprintf(fp, "Tot Elec ");
+    for(j=0; j<Nx; j++) {
+        fprintf(fp, " %5.2f", electrons[j]);
+    }
+    fprintf(fp, "\n");
+    fprintf(fp, "Net crg  ");
     for(j=0; j<Nx; j++) {
         fprintf(fp, " %5.2f", crg[j]);
     }
     fprintf(fp, "\n");
 
-    fprintf(fp, "Protons   ");
-    for(j=0; j<Nx; j++) {
-        fprintf(fp, " %5.2f", protons[j]);
-    }
-    fprintf(fp, "\n");
+    
+    
 
-    fprintf(fp, "Electrons ");
-    for(j=0; j<Nx; j++) {
-        fprintf(fp, " %5.2f", electrons[j]);
-    }
-    fprintf(fp, "\n");
+    
 
     fclose(fp);
 
@@ -1590,9 +1692,9 @@ float fround3(float x)
 
     sprintf(sbuff, "%.3f", x);
     y=atof(sbuff);
-    //    if (x>0.0000001) return (int)(x*1000+0.5)/1000.0;
-    //    if (x<-0.0000001) return -(int)(-x*1000+0.5)/1000.0;
-    //    else return 0.000;
+//    if (x>0.0000001) return (int)(x*1000+0.5)/1000.0;
+//    if (x<-0.0000001) return -(int)(-x*1000+0.5)/1000.0;
+//    else return 0.000;
     return y;
 
 }
