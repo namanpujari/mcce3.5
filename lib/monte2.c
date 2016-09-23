@@ -16,7 +16,7 @@ int  monte2_check_toggle(PROT prot);
 void zero_counters(PROT *prot_p);
 void do_free_energy(PROT *prot_p);
 double free_unf(PROT prot);
-int curve_fitting(PROT prot);
+int curve_fitting(PROT prot, int n_titra);
 int monte_out(PROT prot, int n_titra);
 int   load1_pairwise();
 void ENTROPY_CORRECTION_FUNCTION(PROT *prot);
@@ -329,10 +329,11 @@ int monte2() {
 	// curve fitting 
     printf("   Fit titration curves to get pKa/Em ...\n");
     fflush(stdout);
-    if (curve_fitting(prot)) {
-        printf("   Fatal error detected in fitting program.\n");
-        return USERERR;
-    }
+    curve_fitting(prot,env.titr_steps);
+    //if (curve_fitting(prot)) {
+        //printf("   Fatal error detected in fitting program.\n");
+        //return USERERR;
+    //}
     
     //printf("free prot, occ_table\n");
     for (ic=0;ic<prot.nc;ic++) free(prot.conf[ic]->occ_table);
@@ -1239,7 +1240,6 @@ int monte_out(PROT prot, int n_titra) {
             protons[i_titra] += n_protons*ysp2[i_res][i_titra] + n_protons_grnd*(1.0-ysp2[i_res][i_titra]);
             electrons[i_titra] += n_electrons*ysp2[i_res][i_titra] + n_electrons_grnd*(1.0-ysp2[i_res][i_titra]);
         }
-        
         fprintf(fp, "\n");
     }
     
@@ -1291,42 +1291,67 @@ extern void dhill(float **p, float *y, int ndim, float ftol, float (*funk)(float
 float *pH, *sumcrg;
 float sumcrg_start,sumcrg_end;
 
-int curve_fitting(PROT prot) {
-    int i_res;
+int curve_fitting(PROT prot, int n_titra) {
+    int i_res, i_conf;
     FILE *fp;
     PKA  pka;
     float guessed_pK, guessed_n;
     int i_titra;
+    float H, e;
     pH = malloc(env.titr_steps * sizeof(float));
-    
-    /*
+
+    /////////
     for (i_res=0;i_res<prot.n_res;i_res++) {
-        if (!prot.res[i_res].sum_crg) continue;
-        n_plateau = 0;
-        start_number = prot.res[i_res].sum_crg[0];
-        in_plateau = 0;
-        for (i_titra=1; i_titra<env.titr_steps; i_titra++) {
-            if (fabs(prot.res[i_res].sum_crg[i_titra] - start_number) > 0.01) {
-                start_number = prot.res[i_res].sum_crg[i_titra];
-                in_plateau = 0;
+        /* Check if there's more than one charge state in this residue */
+        if (env.monte_print_nonzero) {
+            for (i_conf=1;i_conf<prot.res[i_res].n_conf;i_conf++) {
+                if (fabs(prot.res[i_res].conf[i_conf].H) > 1e-4) break;
+                if (fabs(prot.res[i_res].conf[i_conf].e) > 1e-4) break;
             }
-            else {
-                if (!in_plateau) n_plateau ++;
-                in_plateau = 1;
+            if (i_conf >= prot.res[i_res].n_conf) continue;
+        }
+        else {
+            H = prot.res[i_res].conf[1].H;
+            e = prot.res[i_res].conf[1].e;
+            for (i_conf=2;i_conf<prot.res[i_res].n_conf;i_conf++) {
+                if (fabs(prot.res[i_res].conf[i_conf].H - H) > 1e-4) break;
+                if (fabs(prot.res[i_res].conf[i_conf].e - e) > 1e-4) break;
+            }
+            if (i_conf >= prot.res[i_res].n_conf) continue;
+        }
+        
+        prot.res[i_res].sum_crg = malloc(n_titra*sizeof(float));
+        memset(prot.res[i_res].sum_crg,0,n_titra*sizeof(float));
+        for (i_titra=0; i_titra<n_titra; i_titra++) {
+            for (i_conf=1;i_conf<prot.res[i_res].n_conf;i_conf++) {
+                prot.res[i_res].sum_crg[i_titra] += prot.res[i_res].conf[i_conf].occ_table[i_titra] * prot.res[i_res].conf[i_conf].netcrg;
             }
         }
-        //printf("%s %c%04d  n_plateau = %d\n", prot.res[i_res].resName,prot.res[i_res].chainID,prot.res[i_res].resSeq,n_plateau);fflush(stdout);
     }
-    */
-    
+    prot.H = malloc(n_titra*sizeof(float));
+    memset(prot.H,0,n_titra*sizeof(float));
+    prot.e = malloc(n_titra*sizeof(float));
+    memset(prot.e,0,n_titra*sizeof(float));
+    prot.sum_crg = malloc(n_titra*sizeof(float));
+    memset(prot.sum_crg,0,n_titra*sizeof(float));
+    for (i_titra=0; i_titra<n_titra; i_titra++) {
+        for (i_res=0;i_res<prot.n_res;i_res++) {
+            for (i_conf=1;i_conf<prot.res[i_res].n_conf;i_conf++) {
+                prot.H[i_titra] += prot.res[i_res].conf[i_conf].occ_table[i_titra] * prot.res[i_res].conf[i_conf].H;
+                prot.e[i_titra] += prot.res[i_res].conf[i_conf].occ_table[i_titra] * prot.res[i_res].conf[i_conf].e;
+                prot.sum_crg[i_titra] += prot.res[i_res].conf[i_conf].occ_table[i_titra] * prot.res[i_res].conf[i_conf].netcrg;
+            }
+        }
+    }
+    //////////
     if (!(fp = fopen(CURVE_FITTING, "w"))) {
         printf("   FATAL: can not write to file \"%s\".", CURVE_FITTING);
         return USERERR;
     }
-    if (env.titr_type == 'p') {   /* pH titration */
+    if (env.titr_type == 'p') {   // pH titration
         fprintf(fp, "Residue            pK   ");
     }
-    else {      /* Eh titration assumed */
+    else {      // Eh titration assumed 
         fprintf(fp, "Residue            Em   ");
     }
     fprintf(fp, "   n(slope)   1000*chi2\n");
@@ -1337,6 +1362,8 @@ int curve_fitting(PROT prot) {
     }
     
     for (i_res=0; i_res<prot.n_res; i_res++) {
+        printf("%s\n", prot.res[i_res].resName);
+        printf("%5.2f\n", prot.res[i_res].sum_crg);
         if (!prot.res[i_res].sum_crg) continue;
         sumcrg = prot.res[i_res].sum_crg;
         
