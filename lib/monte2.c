@@ -439,15 +439,8 @@ PROT monte2_load_conflist(char *fname) {
 }
 
 int monte2_load_pairwise(PROT prot) {
-    int   ic, jc, jc_start;
-    char  fname[MAXCHAR_LINE];
-    FILE  *fp;
-    char  sbuff[MAXCHAR_LINE];
-    char  stemp[MAXCHAR_LINE];
-    int   natom, i_res,i_conf,j_res,j_conf;
-    int   serial;
-    char  uniqID[15];
-    float ele_pair, vdw_pair;
+    int   ic, jc;
+    int   i_res,i_conf,j_res,j_conf;
     int   n_miss_jc = 0,i_miss_ic,j_miss_ic,i_miss_jc,j_miss_jc;
     int   *n_miss_ic = NULL, **miss_ic = NULL, *miss_jc = NULL;
     
@@ -1083,16 +1076,16 @@ float *xp2, *yp2;   /* titration points */
 
 int monte_out(PROT prot, int n_titra) {
     FILE *fp;
-    int  N_crg, N_res, j, Counter, i, ic, i_titra, i_res, i_conf;
+    int  N_crg, N_res, j, Counter, i, ic, i_titra, i_res;
     int n_protons, n_electrons, n_crg;
     int n_protons_grnd, n_electrons_grnd, n_crg_grnd;
-    float H, e;
+    //float H, e;
     char line[20];
     char **head2, **mhead;  // add mhead for mfe header
     float **ypp2, **ysp2;
     //int Nx;       /* number of titration points */
     float *xp2, *yp2;   /* titration points */
-    float    **occ_table;   /* occ of conformers at various pH/Eh */
+    //float    **occ_table;   /* occ of conformers at various pH/Eh */
     float *netcrg;
     float *new_netcrg;
     float *crg, *protons, *electrons;    /* total net charge at pHs */
@@ -1362,8 +1355,8 @@ int curve_fitting(PROT prot, int n_titra) {
     }
     
     for (i_res=0; i_res<prot.n_res; i_res++) {
-        printf("%s\n", prot.res[i_res].resName);
-        printf("%5.2f\n", prot.res[i_res].sum_crg);
+        //printf("%s\n", prot.res[i_res].resName);
+        //printf("%5.2f\n", prot.res[i_res].sum_crg);
         if (!prot.res[i_res].sum_crg) continue;
         sumcrg = prot.res[i_res].sum_crg;
         
@@ -1704,7 +1697,7 @@ void load_states(RES *r)// to load the ionization states
 
 	int i;
     int j=0;
-    float x=0.00;
+    //float x=0.00;
 
     for(j=0;j<r->num_of_states;j++)
     {
@@ -1828,7 +1821,7 @@ void ENTROPY_CORRECTION_FUNCTION(PROT *p)
 {
     //printf("start");
     int i;
-    int j;
+    //int j;
     	for( i=0;i<p->n_res;i++)//loop all over the whole protein
     	{
     		//p->res[i].num_of_states=0;
