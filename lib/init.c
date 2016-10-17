@@ -266,8 +266,6 @@ int get_env()
             if (str1[0] == 't' || str1[0] == 'T') env.minimize_size = 1;
             else env.minimize_size = 0;
         }
-
-        
         else if (strstr(sbuff, "(DO_PREMCCE)")) {
             str1 = strtok(sbuff, " ");
             if (str1[0] == 't' || str1[0] == 'T') {
@@ -500,8 +498,6 @@ int get_env()
         else if (strstr(sbuff, "(PRUNE_VDW)")) {
             env.prune_vdw = atof(strtok(sbuff, " "));
         }
-
-
         else if (strstr(sbuff, "(REASSIGN)")) {
             str1 = strtok(sbuff, " ");
             if (str1[0] == 't' || str1[0] == 'T') {
@@ -648,7 +644,22 @@ int get_env()
             }
             else env.monte_print_nonzero = 0;
         }
-        
+        // Step 5 variables
+        else if (strstr(sbuff, "(YIFAN_PKA)")) {
+            str1 = strtok(sbuff, " ");
+            if (str1[0] == 't' || str1[0] == 'T') {
+                env.yifan_pka = 1;
+            }
+            else env.yifan_pka = 0;
+        }
+        else if (strstr(sbuff, "(MFE_PKA)")) {
+            str1 = strtok(sbuff, " ");
+            if (str1[0] == 't' || str1[0] == 'T') {
+                env.mfe_pka = 1;
+            }
+            else env.mfe_pka = 0;
+        }
+        //////
         else if (strstr(sbuff, "(ANNEAL_TEMP_START)")) {
             env.anneal_temp_start = atof(strtok(sbuff, " "));
         }
@@ -870,6 +881,13 @@ int get_env()
                 env.do_corrections = 0;
             }
             else env.do_corrections = 1;
+        }
+        else if (strstr(sbuff, "(DO_POSTMCCE)")) {
+            str1 = strtok(sbuff, " ");
+            if (str1[0] == 't' || str1[0] == 'T') {
+                env.do_postmcce = 1;
+            }
+            else env.do_postmcce = 0;
         }
     }
 

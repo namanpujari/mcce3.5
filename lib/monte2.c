@@ -329,11 +329,8 @@ int monte2() {
 	// curve fitting 
     printf("   Fit titration curves to get pKa/Em ...\n");
     fflush(stdout);
-    curve_fitting(prot,env.titr_steps);
-    //if (curve_fitting(prot)) {
-        //printf("   Fatal error detected in fitting program.\n");
-        //return USERERR;
-    //}
+    //curve_fitting(prot,env.titr_steps);
+    
     
     //printf("free prot, occ_table\n");
     for (ic=0;ic<prot.nc;ic++) free(prot.conf[ic]->occ_table);
@@ -1284,6 +1281,7 @@ extern void dhill(float **p, float *y, int ndim, float ftol, float (*funk)(float
 float *pH, *sumcrg;
 float sumcrg_start,sumcrg_end;
 
+/*
 int curve_fitting(PROT prot, int n_titra) {
     int i_res, i_conf;
     FILE *fp;
@@ -1295,7 +1293,7 @@ int curve_fitting(PROT prot, int n_titra) {
 
     /////////
     for (i_res=0;i_res<prot.n_res;i_res++) {
-        /* Check if there's more than one charge state in this residue */
+        // Check if there's more than one charge state in this residue
         if (env.monte_print_nonzero) {
             for (i_conf=1;i_conf<prot.res[i_res].n_conf;i_conf++) {
                 if (fabs(prot.res[i_res].conf[i_conf].H) > 1e-4) break;
@@ -1360,7 +1358,7 @@ int curve_fitting(PROT prot, int n_titra) {
         if (!prot.res[i_res].sum_crg) continue;
         sumcrg = prot.res[i_res].sum_crg;
         
-        /* a reasonable guess makes optimization easier */
+        // a reasonable guess makes optimization easier
         guessed_n = 0;
         guessed_pK = (pH[0]+pH[env.titr_steps-1])/2.;
         
@@ -1395,7 +1393,7 @@ int curve_fitting(PROT prot, int n_titra) {
     free(pH);
     
     return 0;
-}
+}*/
 
 PKA fitting(float guessed_pK, float guessed_n) {
     /* initialize the simplex and set up optimization */
