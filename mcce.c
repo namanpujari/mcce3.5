@@ -51,7 +51,6 @@ int main(int argc, char *argv[])
 
    /* Do step 4. Monte Carlo */
    if (env.do_monte) {
-      
       if (!env.monte_adv_opt) {
       printf("Step 4. Standard Monte Carlo Sampling\n"); fflush(stdout);
       if (monte()) {db_close(); return USERERR;}
@@ -64,7 +63,12 @@ int main(int argc, char *argv[])
        }
    }
    else printf("Not doing \"Step 4. Monte Carlo Sampling\"\n\n");
-
+   
+   if (env.do_postmcce){
+      printf("Step 5. Post Monte Carlo\n"); fflush(stdout);
+      if (postrun()) {db_close(); return USERERR;}
+      else printf("Step 5 Done.\n\n");
+   }
 
    db_close();
    return 0;

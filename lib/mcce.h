@@ -275,13 +275,11 @@ typedef struct {
     int    counter;      /* General counter */
     int    n_atom;
     ATOM   *atom;
-
-/* For Pascal's MSC */
+    /* For Pascal's MSC */
     int nrg_idx;
     int on_atoms;
     int *on_atm_idx;
-/* For Pascal's MSC */
-
+    /* For Pascal's MSC */
     VECTOR r_min;
     VECTOR r_max;
     int    i_res_prot;
@@ -552,6 +550,7 @@ typedef struct {
     char do_rotamers;
     char do_energies;
     char do_monte;
+    char do_postmcce;
     
     char minimize_size;
     
@@ -758,6 +757,11 @@ typedef struct {
     
     int ignore_input_h; /*toggle on to disregard all hydrogens in input structure*/
     
+    // Step 5 variables 
+    char yifan_pka;
+    char mfe_pka;
+
+
 } ENV;
 
 extern ENV env;
@@ -877,3 +881,4 @@ int energies();
 int energies2();
 int monte();
 int monte2();
+int postrun();

@@ -552,6 +552,7 @@ typedef struct {
     char do_rotamers;
     char do_energies;
     char do_monte;
+    char do_postmcce;
     
     char minimize_size;
     
@@ -758,6 +759,10 @@ typedef struct {
     
     int ignore_input_h; /*toggle on to disregard all hydrogens in input structure*/
     
+    // Step 5 variables 
+    char yifan_pka;
+    char mfe_pka;
+    
 } ENV;
 
 extern ENV env;
@@ -877,3 +882,4 @@ int energies();
 int energies2();
 int monte();
 int monte2();
+int postrun();
