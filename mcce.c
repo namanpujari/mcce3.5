@@ -109,6 +109,8 @@ void welcome()
    printf("July 2016, Yifan's monte carlo no longer needs step3_out.pdb directory (fixed)\n");
    printf("July 2016, Removed PASCAL COMTE GENETIC ALGORITHM from this version\n");
    printf("Sept 2016, Added charged ligands to sum_crg.out.\n");
+   printf("Oct  2016, Changed Yifan MC pK.out output format to match mfe format.\n");
+   printf("Oct  2016, Added step 5 that creates pK.out and sum_crg.out.\n");
    fflush(stdout);
 	
 	// Added by Jessica on Nov. 2015
