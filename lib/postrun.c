@@ -1,13 +1,26 @@
+#include <glib.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include <math.h>
-#include <ctype.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <zlib.h>
 #include "mcce.h"
 
 //set to skip monte carlo, only do MFE (needs pre-existing fort.38)
 int MFE_ONLY = 0;
+
+#define mev2Kcal 0.0235  // to keep consistent with mfe.py, use this constant instead of PH2KCAL/58, just for mfe part
+#define TINY 1.0E-10
+#define NMAX 5000
+#define GET_PSUM for (j=0; j<ndim; j++) {\
+                        for (sum=0.0, i=0; i<mpts; i++) sum += p[i][j];\
+                         psum[j] = sum;}
+#define SWAP(a,b) {swap=(a);(a)=(b);(b)=swap;}
+#define NUNIQS 1000000
 
 /* normal pw is garanteed to be smaller than 2000. When it is is bigger than 5000, it is 
  * represents a value refenced to a clashed pair of conformers.
@@ -60,6 +73,25 @@ typedef struct  {
     int n;
     int *res;
 } BIGLIST;
+
+typedef struct {
+   //int header;
+   float x;
+   float y;
+   float z;
+   float rad;
+   float crg;
+   //int trailer;
+} UNF;
+
+typedef struct {
+   UNF  unf[NUNIQS];      /* this number limits the number of atoms */
+   char head[NUNIQS][31]; /* head of the atom line */
+   int n;
+} ELE_BOUND;
+
+
+
 /* public variables */
 PROT     prot;
 RES      conflist;
@@ -75,14 +107,8 @@ FILE     *fp;
 float    **occ_table;   
 char **shead;
 
+ELE_BOUND ele_bound;
 
-#define mev2Kcal 0.0235  // to keep consistent with mfe.py, use this constant instead of PH2KCAL/58, just for mfe part
-#define TINY 1.0E-10
-#define NMAX 5000
-#define GET_PSUM for (j=0; j<ndim; j++) {\
-                        for (sum=0.0, i=0; i<mpts; i++) sum += p[i][j];\
-                         psum[j] = sum;}
-#define SWAP(a,b) {swap=(a);(a)=(b);(b)=swap;}
 
 
 
@@ -96,6 +122,8 @@ int   postrun_load_occupancy();
 void  postrun_group_confs();
 int   postrun_fitit();
 int   postrun_load_conflist();
+int   potential_map();
+int   write_amber_siz(FILE *siz); 
 struct STAT postrun_fit(float a, float b);
 float postrun_score(float v[]);
 void postrun_dhill(float **p, float *y, int ndim, float ftol, float (*funk)(float []), int *nfunk);
@@ -116,7 +144,7 @@ int postrun()
     }
     
 
-
+   
     /* load pairwise */
     printf("   Load pairwise interactions ...\n"); fflush(stdout);
     if (postrun_load_pairwise()) {
@@ -136,7 +164,6 @@ int postrun()
     
 
     for (i=0; i<env.titr_steps; i++) {
-        
         postrun_group_confs();
     }
 
@@ -164,10 +191,25 @@ int postrun()
         free(pairwise[i]);
     free(pairwise);
     
+    //printf("   Creating connectivity table...\n"); fflush(stdout);
+    //get_connect12(prot);
+    //printf("   Done\n\n"); fflush(stdout);
+
+
+    if (env.display_potential_map){
+        if (potential_map()) {
+            printf("   Fatal error detected in potential_map().\n");
+            return USERERR;
+        }
+    }
     printf("   Output files:\n");
     printf("      %-16s: pKa or Em from titration curve fitting.\n", CURVE_FITTING);
     printf("      %-16s: Summary of residue charges.\n", "sum_crg.out");
-    
+    printf("      %-16s: PDB for the most occupied conformer for each residue.\n", "step5_out.pdb");
+    printf("      %-16s: DelPhi atom radii.\n", "amber.siz");
+    printf("      %-16s: DelPhi atom charges.\n", "amber.crg");
+    printf("      %-16s: DelPhi parameters.\n", "fort.10");
+    printf("      %-16s: DelPhi potential map.\n", "phimap01.cube");
     return 0;
 }
 
@@ -789,6 +831,150 @@ int postrun_fitit()
     return 0;
 }
 
+int potential_map(){
+
+    FILE *fp, *fp2, *fp3;
+    char sbuff[MAXCHAR_LINE];
+    int i, j, k,c, iConf, n_retry, ic, a;
+    int conf_counter, titr_step_counter;
+    char *tok;
+    float protein_charge;
+    protein_charge = 0.0;
+    n_retry = 0; /* reset delphi failure counter for this conformer */
+    a = 0;
+    c = 0;
+    if (!(fp=fopen(STEP2_OUT, "r"))) {
+       printf("   FATAL: energies(): \"No step 2 output \"%s\".\n", STEP2_OUT);
+       return USERERR;
+    }
+    prot = load_pdb(fp);
+    fclose(fp);
+    printf("   Sreaching for the most occupied conformer for each residue in fort.38 at %cH %d\n",env.titr_type,env.potential_map_point);
+    
+    // Writing amber.siz file for delphi
+    fp2 = fopen("fort.11", "w");
+    fprintf(fp2,"!\n");
+    fprintf(fp2,"!   This file was created from MCCE3.5 topology files\n");
+    fprintf(fp2,"!    Radius of all hydrogens with\n");
+    fprintf(fp2,"! Column 1-6: Atom name; column 7-12: Residuename;\n");
+    fprintf(fp2,"! column 13-18: atom size.\n");
+    fprintf(fp2,"atom__res_radius_\n");
+    fprintf(fp2,"1H          1.250\n");
+    fprintf(fp2,"2H          1.250\n");
+    fprintf(fp2,"3H          1.250\n");
+    fprintf(fp2,"H1          1.250\n");
+    fprintf(fp2,"H2          1.250\n");
+    fprintf(fp2,"H3          1.250\n");
+    fprintf(fp2,"OXT         1.480\n");
+    fprintf(fp2,"\n");
+
+    // Writing amber.siz file for delphi
+    fp3 = fopen("fort.12", "w");
+    fprintf(fp3,"!\n");
+    fprintf(fp3,"!   This file was created from MCCE3.5 topology files\n");
+    fprintf(fp3,"!    Radius of all hydrogens with\n");
+    fprintf(fp3,"! Column 1-6: atom name; column 7-9: residue name;\n");
+    fprintf(fp3,"! column 10-12: residue number; column 14: chain name;\n");
+    fprintf(fp3,"! column 15-23: charge magnitude. For example:\n");
+    fprintf(fp3,"! CA    ARG130 B -0.2637 In is a valid format\n");
+    fprintf(fp3,"atom__resnumbc_charge_\n");
+    fprintf(fp3,"1H              0.0906 !!! Hydrogen of CA backbone\n");
+    fprintf(fp3,"2H              0.0906\n");
+    fprintf(fp3,"3H              0.0906\n");
+    fprintf(fp3,"\n");
+    fprintf(fp3,"H1              0.4240 !!! Hydrogen for N-terminal residue\n");
+    fprintf(fp3,"H2              0.4240 !!!\n");
+    fprintf(fp3,"H3              0.4240 !!!\n");
+    fprintf(fp3,"\n");
+    
+    // Writing PDB file
+    fp = fopen("step5_out.pdb", "w");
+    for (i=0; i<prot.n_res; i++) {
+        for (k=0; k<prot.res[i].conf[0].n_atom; k++) {
+            fprintf(fp2,"%-05s %s      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].rad);
+            fprintf(fp3,"%-05s %s      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].crg);
+            protein_charge += prot.res[i].conf[0].atom[k].crg;
+            if (c<99999) c++;
+            fprintf(fp, "ATOM  %5d %4s%c%3s %c%4d    %8.3f%8.3f%8.3f%7.3f%7.3f           %1s\n",
+                            c, 
+                            prot.res[i].conf[0].atom[k].name,
+                            prot.res[i].conf[0].altLoc,
+                            prot.res[i].resName,
+                            prot.res[i].chainID,
+                            prot.res[i].resSeq,
+                            prot.res[i].conf[0].atom[k].xyz.x,
+                            prot.res[i].conf[0].atom[k].xyz.y,
+                            prot.res[i].conf[0].atom[k].xyz.z,
+                            1.00,
+                            0.00,
+                            prot.res[i].conf[0].atom[k].name);
+            //printf("%s %s %s  %5.2f\n", prot.res[i].conf[0].confName, prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].rad);
+        }
+        if (!env.only_backbone){
+            for (j=0; j<prot.res[i].n_conf; j++){
+                if (!strchr(prot.res[i].conf[j].confName, 'BK')){
+                        if (occ_table[a][env.potential_map_point] > 0.5){
+                            for (k=0; k<prot.res[i].conf[j].n_atom; k++){
+                                //printf("rad %s %s %s  %5.2f\n",prot.res[i].conf[j].confName, prot.res[i].conf[j].atom[k].name, prot.res[i].resName, prot.res[i].conf[j].atom[k].rad);
+                                //printf("crg %s %s %s  %5.2f\n",prot.res[i].conf[j].confName, prot.res[i].conf[j].atom[k].name, prot.res[i].resName, prot.res[i].conf[j].atom[k].crg);
+                                fprintf(fp2,"%-05s %s      %5.2f\n", prot.res[i].conf[j].atom[k].name, prot.res[i].resName, prot.res[i].conf[j].atom[k].rad);
+                                fprintf(fp3,"%-05s %s      %5.2f\n", prot.res[i].conf[j].atom[k].name, prot.res[i].resName, prot.res[i].conf[j].atom[k].crg);
+                                protein_charge += prot.res[i].conf[j].atom[k].crg;
+                                if (c<99999) c++;
+                                fprintf(fp, "ATOM  %5d %4s%c%3s %c%4d    %8.3f%8.3f%8.3f%7.3f%7.3f           %1s\n",
+                                            c, 
+                                            prot.res[i].conf[j].atom[k].name,
+                                            prot.res[i].conf[j].altLoc,
+                                            prot.res[i].resName,
+                                            prot.res[i].chainID,
+                                            prot.res[i].resSeq,
+                                            prot.res[i].conf[j].atom[k].xyz.x,
+                                            prot.res[i].conf[j].atom[k].xyz.y,
+                                            prot.res[i].conf[j].atom[k].xyz.z,
+                                            1.00,
+                                            0.00,
+                                            prot.res[i].conf[j].atom[k].name);                        
+                            }
+                        }
+                        a = a + 1;
+                }
+            }
+        }
+        fprintf(fp2,"\n");
+        fprintf(fp3,"\n");
+    }
+    printf("   Protein total charge = %5.2f\n",protein_charge);
+    fclose(fp2);
+    fclose(fp3);
+    fclose(fp);
+
+
+    fp = fopen("fort.10", "w");
+    //fprintf(fp, "gsize=%d\n", env.grids_delphi);
+    fprintf(fp, "scale=%.6f\n", (env.grids_per_ang));
+    fprintf(fp, "perfil=70.0\n");
+    fprintf(fp, "in(pdb,file=\"step5_out.pdb\")\n");
+    fprintf(fp, "in(siz,file=\"fort.11\")\n");
+    fprintf(fp, "in(crg,file=\"fort.12\")\n");
+    fprintf(fp, "indi=%.1f\n", env.epsilon_prot);
+    fprintf(fp, "exdi=%.1f\n", env.epsilon_solv);
+    fprintf(fp, "ionrad=%.1f\n", env.ionrad);
+    fprintf(fp, "prbrad=%.1f\n", env.radius_probe);
+    fprintf(fp, "salt=%.2f\n", env.salt);
+    fprintf(fp, "bndcon=2\n");
+    fprintf(fp, "out(phi,file=phimap01.cube, format=cube)\n");
+    fprintf(fp, "energy(s,c,g)\n");
+    fclose(fp);
+    
+    sprintf(sbuff, "%s>delphi%02d.log 2>/dev/null", env.delphi_potential_exe, 1);
+    printf("   Running DelPhi to get potential map\n");
+    system(sbuff);
+
+    printf("   Done\n");
+
+    return 0;
+}
+
 float postrun_fround3(float x)
 {
     // round off the float point number
@@ -1304,8 +1490,6 @@ float postrun_score(float v[])
     return S;
 }
 
-
-
                  
 void postrun_dhill(float **p, float *y, int ndim, float ftol, float (*funk)(float []), int *nfunk)
 {
@@ -1412,7 +1596,7 @@ int postrun_load_occupancy()
       while (tok != NULL && titr_step_counter < env.titr_steps)
       {
          tok = strtok (NULL, " \0");
-         //printf ("%f\n",atof(tok));
+         //printf("%d %f\n",conf_counter,atof(tok));
          //fflush(stdout);
          occ_table[conf_counter][titr_step_counter] = atof(tok);
          ++titr_step_counter;

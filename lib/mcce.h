@@ -760,6 +760,10 @@ typedef struct {
     // Step 5 variables 
     char yifan_pka;
     char mfe_pka;
+    char display_potential_map;
+    char only_backbone;
+    int potential_map_point;
+    char  delphi_potential_exe[256];
 
 
 } ENV;

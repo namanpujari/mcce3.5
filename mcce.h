@@ -682,6 +682,9 @@ typedef struct {
     float titr_phd;
     float titr_eh0;
     float titr_ehd;
+    // Amended mcce.h ENV with titr_ex0 and titr_exd:: 'extra' titration
+    float titr_ex0;
+    float titr_exd;
     int   titr_steps;
 
     float big_pairwise;
@@ -762,6 +765,10 @@ typedef struct {
     // Step 5 variables 
     char yifan_pka;
     char mfe_pka;
+    char display_potential_map;
+    char only_backbone;
+    int potential_map_point;
+    char  delphi_potential_exe[256];
     
 } ENV;
 

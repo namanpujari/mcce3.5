@@ -889,6 +889,26 @@ int get_env()
             }
             else env.do_postmcce = 0;
         }
+        else if (strstr(sbuff, "(DO_POTENTIAL_MAP)")) {
+            str1 = strtok(sbuff, " ");
+            if (str1[0] == 't' || str1[0] == 'T') {
+                env.display_potential_map = 1;
+            }
+            else env.display_potential_map = 0;
+        }
+        else if (strstr(sbuff, "(ONLY_BACKBONE)")) {
+            str1 = strtok(sbuff, " ");
+            if (str1[0] == 't' || str1[0] == 'T') {
+                env.only_backbone = 1;
+            }
+            else env.only_backbone = 0;
+        }
+        else if (strstr(sbuff, "(POTENTIAL_MAP_POINT)")) {
+                env.potential_map_point = atof(strtok(sbuff, " "));
+        }
+        else if (strstr(sbuff, "(DELPHI_POTENTIAL_EXE)")) {
+            strcpy(env.delphi_potential_exe, strtok(sbuff, " "));
+        }
     }
 
     fclose(fp);
