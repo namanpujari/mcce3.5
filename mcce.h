@@ -6,7 +6,7 @@
 
 /*--- Constants ---*/
 /* Constants for geometry transformation recorder */
-#define VERSION       "MCCE2.5.1"
+#define VERSION       "MCCE3.5"
 #define USERERR -1
 #define MAXCHAR_LINE 320
 #define DUMMY_GDBM   "~temp.dbm.XXXXXX"
