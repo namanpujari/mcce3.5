@@ -142,9 +142,8 @@ int postrun()
         printf("   FATAL: error in reading conformer list %s", FN_CONFLIST3);
         return USERERR;
     }
-    
 
-   
+    
     /* load pairwise */
     printf("   Load pairwise interactions ...\n"); fflush(stdout);
     if (postrun_load_pairwise()) {
@@ -153,6 +152,8 @@ int postrun()
     }
     printf("   Done\n\n");
     fflush(stdout);
+
+    
 
     occ_table = (float **) malloc(conflist.n_conf*sizeof(float *));
     for (i=0; i<conflist.n_conf; i++) occ_table[i] = (float *) malloc(env.titr_steps * sizeof(float));
@@ -206,8 +207,8 @@ int postrun()
     printf("      %-16s: pKa or Em from titration curve fitting.\n", CURVE_FITTING);
     printf("      %-16s: Summary of residue charges.\n", "sum_crg.out");
     printf("      %-16s: PDB for the most occupied conformer for each residue.\n", "step5_out.pdb");
-    printf("      %-16s: DelPhi atom radii.\n", "amber.siz");
-    printf("      %-16s: DelPhi atom charges.\n", "amber.crg");
+    printf("      %-16s: DelPhi atom radii.\n", "fort.11");
+    printf("      %-16s: DelPhi atom charges.\n", "fort.12");
     printf("      %-16s: DelPhi parameters.\n", "fort.10");
     printf("      %-16s: DelPhi potential map.\n", "phimap01.cube");
     return 0;
@@ -302,6 +303,7 @@ int postrun_load_conflist()
             prot.res[ires].iCode = conf_temp.iCode;
         }
     }
+    
     return 0;
 }
 
@@ -440,7 +442,6 @@ int postrun_load_pairwise()
         }
     }
 
-    
     /* free memory */
     free_ematrix(&ematrix);
 
@@ -892,7 +893,7 @@ int potential_map(){
     for (i=0; i<prot.n_res; i++) {
         for (k=0; k<prot.res[i].conf[0].n_atom; k++) {
             fprintf(fp2,"%-05s %s      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].rad);
-            fprintf(fp3,"%-05s %s      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].crg);
+            fprintf(fp3,"%-05s %s      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, 0.00);//prot.res[i].conf[0].atom[k].crg);
             protein_charge += prot.res[i].conf[0].atom[k].crg;
             if (c<99999) c++;
             fprintf(fp, "ATOM  %5d %4s%c%3s %c%4d    %8.3f%8.3f%8.3f%7.3f%7.3f           %1s\n",
