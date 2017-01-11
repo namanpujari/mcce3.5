@@ -840,7 +840,9 @@ int potential_map(){
     int conf_counter, titr_step_counter;
     char *tok;
     float protein_charge;
+    float residue_charge;
     protein_charge = 0.0;
+    residue_charge = 0.0;
     n_retry = 0; /* reset delphi failure counter for this conformer */
     a = 0;
     c = 0;
@@ -852,7 +854,7 @@ int potential_map(){
     fclose(fp);
     printf("   Sreaching for the most occupied conformer for each residue in fort.38 at %cH %d\n",env.titr_type,env.potential_map_point);
     
-    // Writing amber.siz file for delphi
+    // Writing radii file for delphi
     fp2 = fopen("fort.11", "w");
     fprintf(fp2,"!\n");
     fprintf(fp2,"!   This file was created from MCCE3.5 topology files\n");
@@ -869,7 +871,7 @@ int potential_map(){
     fprintf(fp2,"OXT         1.480\n");
     fprintf(fp2,"\n");
 
-    // Writing amber.siz file for delphi
+    // Writing charge file for delphi
     fp3 = fopen("fort.12", "w");
     fprintf(fp3,"!\n");
     fprintf(fp3,"!   This file was created from MCCE3.5 topology files\n");
@@ -891,27 +893,51 @@ int potential_map(){
     // Writing PDB file
     fp = fopen("step5_out.pdb", "w");
     for (i=0; i<prot.n_res; i++) {
-        for (k=0; k<prot.res[i].conf[0].n_atom; k++) {
-            fprintf(fp2,"%-05s %s      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].rad);
-            fprintf(fp3,"%-05s %s      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, 0.00);//prot.res[i].conf[0].atom[k].crg);
-            protein_charge += prot.res[i].conf[0].atom[k].crg;
-            if (c<99999) c++;
-            fprintf(fp, "ATOM  %5d %4s%c%3s %c%4d    %8.3f%8.3f%8.3f%7.3f%7.3f           %1s\n",
-                            c, 
-                            prot.res[i].conf[0].atom[k].name,
-                            prot.res[i].conf[0].altLoc,
-                            prot.res[i].resName,
-                            prot.res[i].chainID,
-                            prot.res[i].resSeq,
-                            prot.res[i].conf[0].atom[k].xyz.x,
-                            prot.res[i].conf[0].atom[k].xyz.y,
-                            prot.res[i].conf[0].atom[k].xyz.z,
-                            1.00,
-                            0.00,
-                            prot.res[i].conf[0].atom[k].name);
-            //printf("%s %s %s  %5.2f\n", prot.res[i].conf[0].confName, prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].rad);
-        }
-        if (!env.only_backbone){
+        if (env.only_backbone){
+            for (k=0; k<prot.res[i].conf[0].n_atom; k++) {
+                fprintf(fp2,"%-05s %s      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].rad);
+                fprintf(fp3,"%-05s %s      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].crg);
+                residue_charge += prot.res[i].conf[0].atom[k].crg;
+                if (c<99999) c++;
+                fprintf(fp, "ATOM  %5d %4s%c%3s %c%4d    %8.3f%8.3f%8.3f%7.3f%7.3f           %1s\n",
+                                c, 
+                                prot.res[i].conf[0].atom[k].name,
+                                prot.res[i].conf[0].altLoc,
+                                prot.res[i].resName,
+                                prot.res[i].chainID,
+                                prot.res[i].resSeq,
+                                prot.res[i].conf[0].atom[k].xyz.x,
+                                prot.res[i].conf[0].atom[k].xyz.y,
+                                prot.res[i].conf[0].atom[k].xyz.z,
+                                1.00,
+                                0.00,
+                                prot.res[i].conf[0].atom[k].name);
+                //printf("%s %s %s  %5.2f\n", prot.res[i].conf[0].confName, prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].rad);
+            }
+        if (abs(residue_charge) > 0.0) printf("   Warning res %3s%c%04d BK charge is non-zero %5.2f\n",prot.res[i].resName, prot.res[i].chainID, prot.res[i].resSeq, residue_charge);
+        //printf("   Warning res %3s%c%04d BK charge is non-zero %5.2f\n",prot.res[i].resName, prot.res[i].chainID, prot.res[i].resSeq,residue_charge);
+        residue_charge = 0.0;
+        }else{
+            for (k=0; k<prot.res[i].conf[0].n_atom; k++) {
+                fprintf(fp2,"%-05s %s      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].rad);
+                fprintf(fp3,"%-05s %s      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, 0.00);//prot.res[i].conf[0].atom[k].crg);
+                //protein_charge += prot.res[i].conf[0].atom[k].crg;
+                if (c<99999) c++;
+                fprintf(fp, "ATOM  %5d %4s%c%3s %c%4d    %8.3f%8.3f%8.3f%7.3f%7.3f           %1s\n",
+                                c, 
+                                prot.res[i].conf[0].atom[k].name,
+                                prot.res[i].conf[0].altLoc,
+                                prot.res[i].resName,
+                                prot.res[i].chainID,
+                                prot.res[i].resSeq,
+                                prot.res[i].conf[0].atom[k].xyz.x,
+                                prot.res[i].conf[0].atom[k].xyz.y,
+                                prot.res[i].conf[0].atom[k].xyz.z,
+                                1.00,
+                                0.00,
+                                prot.res[i].conf[0].atom[k].name);
+                //printf("%s %s %s  %5.2f\n", prot.res[i].conf[0].confName, prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].rad);
+            }
             for (j=0; j<prot.res[i].n_conf; j++){
                 if (!strchr(prot.res[i].conf[j].confName, 'BK')){
                         if (occ_table[a][env.potential_map_point] > 0.5){
@@ -940,11 +966,12 @@ int potential_map(){
                         a = a + 1;
                 }
             }
+        printf("   Protein total charge = %5.2f\n",protein_charge);
         }
         fprintf(fp2,"\n");
         fprintf(fp3,"\n");
     }
-    printf("   Protein total charge = %5.2f\n",protein_charge);
+    
     fclose(fp2);
     fclose(fp3);
     fclose(fp);
