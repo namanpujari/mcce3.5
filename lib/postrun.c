@@ -837,7 +837,7 @@ int potential_map(){
     FILE *fp, *fp2, *fp3;
     char sbuff[MAXCHAR_LINE];
     int i, j, k,c, iConf, n_retry, ic, a;
-    int conf_counter, titr_step_counter;
+    int conf_counter;
     char *tok;
     float protein_charge;
     float residue_charge;
@@ -893,7 +893,7 @@ int potential_map(){
     // Writing PDB file
     fp = fopen("step5_out.pdb", "w");
     for (i=0; i<prot.n_res; i++) {
-        if (env.only_backbone){
+        if (env.only_backbone){   // If user want only BK pot. map (keep charges of BK)
             for (k=0; k<prot.res[i].conf[0].n_atom; k++) {
                 fprintf(fp2,"%-05s %s      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].rad);
                 fprintf(fp3,"%-05s %s      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].crg);
@@ -917,7 +917,7 @@ int potential_map(){
         if (abs(residue_charge) > 0.0) printf("   Warning res %3s%c%04d BK charge is non-zero %5.2f\n",prot.res[i].resName, prot.res[i].chainID, prot.res[i].resSeq, residue_charge);
         //printf("   Warning res %3s%c%04d BK charge is non-zero %5.2f\n",prot.res[i].resName, prot.res[i].chainID, prot.res[i].resSeq,residue_charge);
         residue_charge = 0.0;
-        }else{
+        }else{  // This will use the most occ. conf. as a default to output pot. map
             for (k=0; k<prot.res[i].conf[0].n_atom; k++) {
                 fprintf(fp2,"%-05s %s      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].rad);
                 fprintf(fp3,"%-05s %s      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, 0.00);//prot.res[i].conf[0].atom[k].crg);
@@ -966,12 +966,12 @@ int potential_map(){
                         a = a + 1;
                 }
             }
-        printf("   Protein total charge = %5.2f\n",protein_charge);
+        
         }
         fprintf(fp2,"\n");
         fprintf(fp3,"\n");
     }
-    
+    printf("   Protein total charge = %5.2f\n",protein_charge);
     fclose(fp2);
     fclose(fp3);
     fclose(fp);
