@@ -211,6 +211,7 @@ int postrun()
     printf("      %-16s: DelPhi atom charges.\n", "fort.12");
     printf("      %-16s: DelPhi parameters.\n", "fort.10");
     printf("      %-16s: DelPhi potential map.\n", "phimap01.cube");
+    printf("      %-16s: DelPhi dielectric map.\n", "epsmap01.eps");
     return 0;
 }
 
@@ -896,7 +897,8 @@ int potential_map(){
         if (env.only_backbone){   // If user want only BK pot. map (keep charges of BK)
             for (k=0; k<prot.res[i].conf[0].n_atom; k++) {
                 fprintf(fp2,"%-05s %s      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].rad);
-                fprintf(fp3,"%-05s %s      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].crg);
+                fprintf(fp3,"%-05s %s %d      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName,prot.res[i].resSeq, prot.res[i].conf[0].atom[k].crg);
+                //fprintf(fp3,"%-05s %s      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].crg);
                 residue_charge += prot.res[i].conf[0].atom[k].crg;
                 if (c<99999) c++;
                 fprintf(fp, "ATOM  %5d %4s%c%3s %c%4d    %8.3f%8.3f%8.3f%7.3f%7.3f           %1s\n",
@@ -991,6 +993,7 @@ int potential_map(){
     fprintf(fp, "salt=%.2f\n", env.salt);
     fprintf(fp, "bndcon=2\n");
     fprintf(fp, "out(phi,file=phimap01.cube, format=cube)\n");
+    fprintf(fp, "out(eps,file=epsmap01.eps)\n");
     fprintf(fp, "energy(s,c,g)\n");
     fclose(fp);
     
