@@ -22,6 +22,7 @@ int MFE_ONLY = 0;
 #define SWAP(a,b) {swap=(a);(a)=(b);(b)=swap;}
 #define NUNIQS 1000000
 
+
 /* normal pw is garanteed to be smaller than 2000. When it is is bigger than 5000, it is 
  * represents a value refenced to a clashed pair of conformers.
  */
@@ -126,8 +127,7 @@ int   potential_map();
 int   write_amber_siz(FILE *siz); 
 struct STAT postrun_fit(float a, float b);
 float postrun_score(float v[]);
-void postrun_dhill(float **p, float *y, int ndim, float ftol, float (*funk)(float []), int *nfunk);
-
+void  postrun_dhill(float **p, float *y, int ndim, float ftol, float (*funk)(float []), int *nfunk);
 
 
 int postrun()
@@ -198,6 +198,7 @@ int postrun()
 
 
     if (env.display_potential_map){
+        printf("Salah oqnefoqnf\n");
         if (potential_map()) {
             printf("   Fatal error detected in potential_map().\n");
             return USERERR;
@@ -206,12 +207,15 @@ int postrun()
     printf("   Output files:\n");
     printf("      %-16s: pKa or Em from titration curve fitting.\n", CURVE_FITTING);
     printf("      %-16s: Summary of residue charges.\n", "sum_crg.out");
-    printf("      %-16s: PDB for the most occupied conformer for each residue.\n", "step5_out.pdb");
-    printf("      %-16s: DelPhi atom radii.\n", "fort.11");
-    printf("      %-16s: DelPhi atom charges.\n", "fort.12");
-    printf("      %-16s: DelPhi parameters.\n", "fort.10");
-    printf("      %-16s: DelPhi potential map.\n", "phimap01.cube");
-    printf("      %-16s: DelPhi dielectric map.\n", "epsmap01.eps");
+    if (env.display_potential_map){
+        printf("      %-16s: PDB for the most occupied conformer for each residue.\n", "step5_out.pdb");
+        printf("      %-16s: DelPhi atom radii.\n", "fort.11");
+        printf("      %-16s: DelPhi atom charges.\n", "fort.12");
+        printf("      %-16s: DelPhi parameters.\n", "fort.10");
+        printf("      %-16s: DelPhi potential map.\n", "phimap01.cube");
+        printf("      %-16s: DelPhi dielectric map.\n", "epsmap01.eps");
+    }
+    
     return 0;
 }
 
@@ -576,7 +580,7 @@ int postrun_fitit()
         strncat(mhead[i], shead[i]+4, 6); mhead[i][9] = '\0';
     }
     if (env.mfe_flag) {
-        if (env.titr_type == 'p') printf("       Doing mfe at pH %.3f for all the residues\n", env.mfe_point);
+        if (env.titr_type == 'p') printf("       Doing mfe at pH %.2f for all the residues\n", env.mfe_point);
         else printf("       Doing mfe at Eh %.3f for all the residues\n", env.mfe_point);
         if ((env.mfe_point>xp[0] && env.mfe_point>xp[Nx-1]) || (env.mfe_point<xp[0] && env.mfe_point<xp[Nx-1]))
             printf("         MFE: mfe point not in the titration range, do mfe at pKa or Em\n");
@@ -587,11 +591,12 @@ int postrun_fitit()
     for (i=0; i<conflist.n_conf; i++)
         free(pairwise[i]);
     free(pairwise);
-   // load the pairwise interaction again, round the ele and vdw to keep consistent with mfe.py  
+    // load the pairwise interaction again, round the ele and vdw to keep consistent with mfe.py  
     if (postrun_load_pairwise_fround3()) {
         printf("   FATAL: mfe pairwise interaction not loaded\n");
         return USERERR;
     }
+
     // load all the conformers of mfe residues
     mfe_res = (RESIDUE *) calloc(n_mfe, sizeof(RESIDUE));
     for (k=0; k<n_mfe; k++) {
@@ -705,7 +710,6 @@ int postrun_fitit()
 
     fclose(fp);
 
-
     /*<<< Loop over y values >>>*/
     if (!(fp = fopen(CURVE_FITTING, "w"))) {
         printf("   FATAL: can not write to file \"%s\".", CURVE_FITTING);
@@ -816,6 +820,7 @@ int postrun_fitit()
         postrun_print_mfe(i, mfePoint, fp, blist_fp); 
     }     
 
+    fclose(fp);
     free(crg);
     free(protons);
     free(electrons);
@@ -853,7 +858,7 @@ int potential_map(){
     }
     prot = load_pdb(fp);
     fclose(fp);
-    printf("   Sreaching for the most occupied conformer for each residue in fort.38 at %cH %d\n",env.titr_type,env.potential_map_point);
+    printf("Salah   Sreaching for the most occupied conformer for each residue in fort.38 at %cH %d\n",env.titr_type,env.potential_map_point);
     
     // Writing radii file for delphi
     fp2 = fopen("fort.11", "w");
@@ -891,20 +896,24 @@ int potential_map(){
     fprintf(fp3,"H3              0.4240 !!!\n");
     fprintf(fp3,"\n");
     
+
+    
     // Writing PDB file
+    //printf(ANSI_COLOR_BLUE "This text is BLUE!"    ANSI_COLOR_RESET "\n");
+    //printf(ANSI_COLOR_BLUE "Warning res BK charge is non-zero %s" ANSI_COLOR_RESET "\n", "Salah" );
     fp = fopen("step5_out.pdb", "w");
     for (i=0; i<prot.n_res; i++) {
         if (env.only_backbone){   // If user want only BK pot. map (keep charges of BK)
             for (k=0; k<prot.res[i].conf[0].n_atom; k++) {
                 fprintf(fp2,"%-05s %s      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].rad);
-                fprintf(fp3,"%-05s %s %d      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName,prot.res[i].resSeq, prot.res[i].conf[0].atom[k].crg);
+                fprintf(fp3,"%-05s %s %d      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].resSeq, prot.res[i].conf[0].atom[k].crg);
                 //fprintf(fp3,"%-05s %s      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].crg);
                 residue_charge += prot.res[i].conf[0].atom[k].crg;
                 if (c<99999) c++;
-                fprintf(fp, "ATOM  %5d %4s%c%3s %c%4d    %8.3f%8.3f%8.3f%7.3f%7.3f           %1s\n",
+                fprintf(fp, "ATOM  %5d %4s %3s %c%4d    %8.3f%8.3f%8.3f%7.3f%7.3f           %1s\n",
                                 c, 
                                 prot.res[i].conf[0].atom[k].name,
-                                prot.res[i].conf[0].altLoc,
+                                //prot.res[i].conf[0].altLoc,
                                 prot.res[i].resName,
                                 prot.res[i].chainID,
                                 prot.res[i].resSeq,
@@ -916,19 +925,19 @@ int potential_map(){
                                 prot.res[i].conf[0].atom[k].name);
                 //printf("%s %s %s  %5.2f\n", prot.res[i].conf[0].confName, prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].rad);
             }
-        if (abs(residue_charge) > 0.0) printf("   Warning res %3s%c%04d BK charge is non-zero %5.2f\n",prot.res[i].resName, prot.res[i].chainID, prot.res[i].resSeq, residue_charge);
-        //printf("   Warning res %3s%c%04d BK charge is non-zero %5.2f\n",prot.res[i].resName, prot.res[i].chainID, prot.res[i].resSeq,residue_charge);
+        if (abs(residue_charge) > 0.0) printf(ANSI_COLOR_BLUE"   Warning res %3s%c%04d BK charge is non-zero %5.2f" ANSI_COLOR_RESET "\n",prot.res[i].resName, prot.res[i].chainID, prot.res[i].resSeq, residue_charge);
         residue_charge = 0.0;
         }else{  // This will use the most occ. conf. as a default to output pot. map
             for (k=0; k<prot.res[i].conf[0].n_atom; k++) {
+                printf("Salah: %s\n", prot.res[i].conf[0].atom[k].on);
                 fprintf(fp2,"%-05s %s      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].rad);
-                fprintf(fp3,"%-05s %s      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, 0.00);//prot.res[i].conf[0].atom[k].crg);
+                fprintf(fp3,"%-05s %s %d      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].resSeq, 0.00);//prot.res[i].conf[0].atom[k].crg);
                 //protein_charge += prot.res[i].conf[0].atom[k].crg;
                 if (c<99999) c++;
-                fprintf(fp, "ATOM  %5d %4s%c%3s %c%4d    %8.3f%8.3f%8.3f%7.3f%7.3f           %1s\n",
+                fprintf(fp, "ATOM  %5d %4s %3s %c%4d    %8.3f%8.3f%8.3f%7.3f%7.3f           %1s\n",
                                 c, 
                                 prot.res[i].conf[0].atom[k].name,
-                                prot.res[i].conf[0].altLoc,
+                                //prot.res[i].conf[0].altLoc,
                                 prot.res[i].resName,
                                 prot.res[i].chainID,
                                 prot.res[i].resSeq,
@@ -936,7 +945,7 @@ int potential_map(){
                                 prot.res[i].conf[0].atom[k].xyz.y,
                                 prot.res[i].conf[0].atom[k].xyz.z,
                                 1.00,
-                                0.00,
+                                2.00,
                                 prot.res[i].conf[0].atom[k].name);
                 //printf("%s %s %s  %5.2f\n", prot.res[i].conf[0].confName, prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].rad);
             }
@@ -947,13 +956,13 @@ int potential_map(){
                                 //printf("rad %s %s %s  %5.2f\n",prot.res[i].conf[j].confName, prot.res[i].conf[j].atom[k].name, prot.res[i].resName, prot.res[i].conf[j].atom[k].rad);
                                 //printf("crg %s %s %s  %5.2f\n",prot.res[i].conf[j].confName, prot.res[i].conf[j].atom[k].name, prot.res[i].resName, prot.res[i].conf[j].atom[k].crg);
                                 fprintf(fp2,"%-05s %s      %5.2f\n", prot.res[i].conf[j].atom[k].name, prot.res[i].resName, prot.res[i].conf[j].atom[k].rad);
-                                fprintf(fp3,"%-05s %s      %5.2f\n", prot.res[i].conf[j].atom[k].name, prot.res[i].resName, prot.res[i].conf[j].atom[k].crg);
+                                fprintf(fp3,"%-05s %s %d      %5.2f\n", prot.res[i].conf[j].atom[k].name, prot.res[i].resName, prot.res[i].resSeq, prot.res[i].conf[j].atom[k].crg);
                                 protein_charge += prot.res[i].conf[j].atom[k].crg;
                                 if (c<99999) c++;
-                                fprintf(fp, "ATOM  %5d %4s%c%3s %c%4d    %8.3f%8.3f%8.3f%7.3f%7.3f           %1s\n",
+                                fprintf(fp, "ATOM  %5d %4s %3s %c%4d    %8.3f%8.3f%8.3f%7.3f%7.3f           %1s\n",
                                             c, 
                                             prot.res[i].conf[j].atom[k].name,
-                                            prot.res[i].conf[j].altLoc,
+                                            //prot.res[i].conf[j].altLoc,
                                             prot.res[i].resName,
                                             prot.res[i].chainID,
                                             prot.res[i].resSeq,
@@ -961,14 +970,13 @@ int potential_map(){
                                             prot.res[i].conf[j].atom[k].xyz.y,
                                             prot.res[i].conf[j].atom[k].xyz.z,
                                             1.00,
-                                            0.00,
+                                            3.00,
                                             prot.res[i].conf[j].atom[k].name);                        
                             }
                         }
                         a = a + 1;
                 }
             }
-        
         }
         fprintf(fp2,"\n");
         fprintf(fp3,"\n");
@@ -1638,7 +1646,6 @@ int postrun_load_occupancy()
    fclose(fp);
    return 0;
 }
-
 
 
 
