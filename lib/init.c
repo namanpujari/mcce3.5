@@ -889,7 +889,7 @@ int get_env()
             }
             else env.do_postmcce = 0;
         }
-        else if (strstr(sbuff, "(DO_POTENTIAL_MAP)")) {
+        else if (strstr(sbuff, "(DISPLAY_POTENTIAL_MAP)")) {
             str1 = strtok(sbuff, " ");
             if (str1[0] == 't' || str1[0] == 'T') {
                 env.display_potential_map = 1;
