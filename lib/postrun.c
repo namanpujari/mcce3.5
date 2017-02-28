@@ -843,6 +843,7 @@ int potential_map(){
     char sbuff[MAXCHAR_LINE];
     int i, j, k,c, iConf, n_retry, ic, a;
     int conf_counter;
+    int titration_point;
     char *tok;
     float protein_charge;
     float residue_charge;
@@ -852,7 +853,7 @@ int potential_map(){
     a = 0;
     c = 0;
     if (!(fp=fopen(STEP2_OUT, "r"))) {
-       printf("   FATAL: energies(): \"No step 2 output \"%s\".\n", STEP2_OUT);
+       printf(ANSI_COLOR_RED "   FATAL: potential_map(): \"No step 2 output \"%s\".\n" ANSI_COLOR_RESET, STEP2_OUT);
        return USERERR;
     }
     prot = load_pdb(fp);
@@ -927,7 +928,7 @@ int potential_map(){
         if (abs(residue_charge) > 0.0) printf(ANSI_COLOR_BLUE "   Warning res %3s%c%04d BK charge is non-zero %5.2f" ANSI_COLOR_RESET "\n",prot.res[i].resName, prot.res[i].chainID, prot.res[i].resSeq, residue_charge);
         residue_charge = 0.0;
         }else{  // This will use the most occ. conf. as a default to output pot. map
-            for (k=0; k<prot.res[i].conf[0].n_atom; k++) {
+            for (k=0; k<prot.res[i].conf[0].n_atom; k++) { // Doing backbone
                 //printf("Salah: %s\n", prot.res[i].conf[0].atom[k].on);
                 fprintf(fp2,"%-05s %s      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].rad);
                 fprintf(fp3,"%-05s %s %d      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].resSeq, 0.00);//prot.res[i].conf[0].atom[k].crg);
@@ -950,7 +951,8 @@ int potential_map(){
             }
             for (j=0; j<prot.res[i].n_conf; j++){
                 if (!strchr(prot.res[i].conf[j].confName, 'BK')){
-                        if (occ_table[a][env.potential_map_point] > 0.5){
+                        titration_point = env.potential_map_point - env.titr_ph0;
+                        if (occ_table[a][titration_point] > 0.5){
                             for (k=0; k<prot.res[i].conf[j].n_atom; k++){
                                 //printf("rad %s %s %s  %5.2f\n",prot.res[i].conf[j].confName, prot.res[i].conf[j].atom[k].name, prot.res[i].resName, prot.res[i].conf[j].atom[k].rad);
                                 //printf("crg %s %s %s  %5.2f\n",prot.res[i].conf[j].confName, prot.res[i].conf[j].atom[k].name, prot.res[i].resName, prot.res[i].conf[j].atom[k].crg);

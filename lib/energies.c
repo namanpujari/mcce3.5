@@ -98,10 +98,14 @@ int energies()
    printf("   Done\n\n"); fflush(stdout);
    fclose(fp);
 
+   
+
    assign_vdw_param(prot);
 
    /* get unique name for each conformer */
    id_conf(prot);
+
+   
 
    /* report net charge */
    if (env.reassign) {
@@ -179,7 +183,6 @@ int energies()
    }
 
    /* DEBUG
-   int k;
    for (i=0; i<prot.n_res; i++) {
       for (j=0; j<prot.res[i].n_conf; j++) {
          for (k=0; k<prot.res[i].conf[j].n_atom; k++) {
@@ -194,6 +197,7 @@ int energies()
       }
    }
    */
+   
 
    /* Compute self vdw, bkb vdw. torsion, epol, pairwise vdw and pairwise electrostatic energy
     * of each conformer and save to a file.
@@ -213,6 +217,7 @@ int energies()
    }
    printf("   Done\n\n");
 	
+         
    printf( "Running %s %s calculations ...\n", env.pbe_solver, env.rxn_method);
    printf("\n");
 
@@ -357,6 +362,8 @@ int energies()
    
    chdir(cur_folder);
    
+   
+
    if (!env.minimize_size) {
       fp = fopen(STEP3_OUT,"w");
       write_pdb(fp, prot);
@@ -366,6 +373,7 @@ int energies()
       printf("   Skiping writing step 3 rotamer file %s.\n", STEP3_OUT);
    }
 
+   
 
    nowB = time(NULL);
    printf("   Total time for step3 (energy calculation) is %ld seconds.\n\n", nowB - time_start);
@@ -391,6 +399,7 @@ int conf_energies(int kr, int kc, PROT prot)
    char del_err, notpassed;
    float weight, val, rxn_corrected, grid_dim;
    VECTOR center;
+
 
 
    /* count conformers */
@@ -443,9 +452,8 @@ int conf_energies(int kr, int kc, PROT prot)
 	  /*conformer is not charged; skipping PBE calculations*/
 	  	for (i=0; i<ele_bound.n; i++) potentials[i] = 0.0;
       }
-	  
       else {
-		  if (!strcmp(env.pbe_solver, "apbs")) {
+         if (!strcmp(env.pbe_solver, "apbs")) {
 			/*RUN APBS CALCIULATIONS*/
 			fp2 = fopen("apbs.pqr", "w");
 			if (write_pqr(fp2)) {
@@ -464,8 +472,8 @@ int conf_energies(int kr, int kc, PROT prot)
 			fprintf(fp, "elec\n");
 			fprintf(fp, "    mg-manual\n");
 			fprintf(fp, "    dime %d %d %d\n", env.grids_apbs, env.grids_apbs, env.grids_apbs);
-		    fprintf(fp, "    grid %.2f %.2f %.2f\n", grid_dim, grid_dim, grid_dim);
-		    fprintf(fp, "    gcent %.3f %.3f %.3f\n", center.x, center.y, center.z);
+         fprintf(fp, "    grid %.2f %.2f %.2f\n", grid_dim, grid_dim, grid_dim);
+         fprintf(fp, "    gcent %.3f %.3f %.3f\n", center.x, center.y, center.z);
 			fprintf(fp, "    mol 1\n");
 			fprintf(fp, "    lpbe\n");
 			fprintf(fp, "    bcfl %s\n", env.bcfl);
@@ -545,24 +553,25 @@ int conf_energies(int kr, int kc, PROT prot)
 			remove(sbuff);
 			sprintf(sbuff, "io.mc");
 			remove(sbuff);
-			
 		 }
-		 
 		 else {
 			/*RUN DELPHI CALCULATIONS*/
 			/*center of grids is given in fort 27*/
+
 			fp = fopen("fort.27", "w");
 			fprintf(fp, "ATOM  %5d  C   CEN  %04d    %8.3f%8.3f%8.3f\n", 1, 1,
 										 center.x,
 										 center.y,
 										 center.z);
 			fclose(fp);
-		  
-			
+		   
 			fp = fopen("fort.13", "w");
 			fwrite(ele_bound.unf, sizeof(UNF), ele_bound.n, fp);
 			fclose(fp);
 			
+         
+
+         
 			n_retry = 0; /* reset delphi failure counter for this conformer */
 			notpassed = 1;
 		  
@@ -571,7 +580,7 @@ int conf_energies(int kr, int kc, PROT prot)
 			   /* DEBUG formatted form of unformatted file sent to delphi
 			   printf("%s\n", prot.res[kr].conf[kc].uniqID);
 			   for (i=0; i<ele_bound.n; i++) {
-			  printf("ATOM  %5d  X   XXX  %04d    %8.3f%8.3f%8.3f%8.3f%8.3f\n", i, i,
+			   printf("ATOM  %5d  X   XXX  %04d    %8.3f%8.3f%8.3f%8.3f%8.3f\n", i, i,
 								   ele_bound.unf[i].x,
 								   ele_bound.unf[i].y,
 								   ele_bound.unf[i].z,
@@ -581,11 +590,14 @@ int conf_energies(int kr, int kc, PROT prot)
 			   printf("\n");
 			   system("cat fort.27");
 			   */
-		  
+
 			   fp = fopen("fort.10", "w");
 			   fprintf(fp, "gsize=%d\n", env.grids_delphi);
 			   fprintf(fp, "scale=%.6f\n", (env.grids_per_ang+0.01*(float)n_retry)/pow(2,del_runs-1));
 			   fprintf(fp, "in(unpdb,file=\"fort.13\")\n");
+            //fprintf(fp, "in(pdb,file=\"1brs.pdb\")\n");
+            fprintf(fp, "in(siz,file=\"amber.siz\")\n");
+            fprintf(fp, "in(crg,file=\"amber.crg\")\n");
 			   fprintf(fp, "indi=%.1f\n", env.epsilon_prot);
 			   fprintf(fp, "exdi=%.1f\n", env.epsilon_solv);
 			   fprintf(fp, "ionrad=%.1f\n", env.ionrad);
@@ -595,8 +607,10 @@ int conf_energies(int kr, int kc, PROT prot)
 			   fprintf(fp, "center(777, 777, 0)\n");
 			   fprintf(fp, "out(frc,file=\"run01.frc\")\n");
 			   fprintf(fp, "out(phi,file=\"run01.phi\")\n");
+            //fprintf(fp, "out(phi,file=phimap01.cube, format=cube)\n");
 			   fprintf(fp, "site(a,c,p)\n");
-			   fprintf(fp, "energy(g,an,ag,sol)\n");
+			   //fprintf(fp, "energy(g,an,ag,sol)\n");
+            fprintf(fp, "energy(s,c,g)\n");
 			   fclose(fp);
 		  
 			   sprintf(sbuff, "%s>delphi%02d.log 2>/dev/null", env.delphi_exe, 1);
@@ -632,7 +646,8 @@ int conf_energies(int kr, int kc, PROT prot)
 				  fprintf(fp, "scale=%.6f\n", (env.grids_per_ang+0.01*(float)n_retry)/pow(2,del_runs-1-i));
 				  fprintf(fp, "in(unpdb,file=\"fort.13\")\n");
 				  fprintf(fp, "in(phi,file=\"run%02d.phi\")\n", i);
-				  fprintf(fp, "indi=%.1f\n", env.epsilon_prot);
+				  //fprintf(fp, "in(phi,file=phimap%02d.cube)\n",i);
+              fprintf(fp, "indi=%.1f\n", env.epsilon_prot);
 				  fprintf(fp, "exdi=%.1f\n", env.epsilon_solv);
 				  fprintf(fp, "ionrad=%.1f\n", env.ionrad);
 				  fprintf(fp, "prbrad=%.1f\n", env.radius_probe);
@@ -641,9 +656,11 @@ int conf_energies(int kr, int kc, PROT prot)
 				  fprintf(fp, "center(777, 777, 0)\n");
 				  fprintf(fp, "out(frc,file=\"run%02d.frc\")\n", i+1);
 				  fprintf(fp, "out(phi,file=\"run%02d.phi\")\n", i+1);
-				  fprintf(fp, "site(a,c,p)\n");
-				  fprintf(fp, "energy(g,an,ag,sol)\n");
-				  fclose(fp);
+				  //fprintf(fp, "out(phi,file=phimap%02d.cube, format=cube)\n",i+1);
+              fprintf(fp, "site(a,c,p)\n");
+				  //fprintf(fp, "energy(g,an,ag,sol)\n");
+				  fprintf(fp, "energy(s,c,g)\n");
+              fclose(fp);
 			  
 				  sprintf(sbuff, "%s>delphi%02d.log 2>/dev/null", env.delphi_exe, i+1);
 				  if (n_retry<100) {
@@ -728,7 +745,7 @@ int conf_energies(int kr, int kc, PROT prot)
 					 break;
 				  }
 			   }
-			   fclose(fp2);
+			   fclose(fp2); 
 			}
 			remove("ARCDAT");
 		 }
@@ -762,7 +779,7 @@ int conf_energies(int kr, int kc, PROT prot)
             pairwise_ele[counter] += prot.res[i].conf[j].atom[k].crg
                                     *(potentials[prot.res[i].conf[j].atom[k].serial]);
          }
-	  pairwise_ele[counter] /= KCAL2KT;
+         pairwise_ele[counter] /= KCAL2KT;
          counter++;
       }
    }
@@ -1014,7 +1031,6 @@ int delphi_depth()
    return depth;
 }
 
-
 void write_fort15()
 {  int i;
    FILE *fp;
@@ -1030,7 +1046,6 @@ void write_fort15()
    fclose(fp);
    return;
 }
-
 
 int conf_rxn(int kr, int kc, PROT prot)
 {  int i, ic, j, k, counter;
@@ -1294,8 +1309,10 @@ int conf_rxn(int kr, int kc, PROT prot)
 			fprintf(fp, "center(777, 777, 0)\n");
 			fprintf(fp, "out(frc,file=\"run01.frc\")\n");
 			fprintf(fp, "out(phi,file=\"run01.phi\")\n");
-			fprintf(fp, "site(a,c,p)\n");
-			fprintf(fp, "energy(g,an,ag,sol)\n");
+			//fprintf(fp, "out(phi,file=phimap01.cube, format=cube)\n");
+         fprintf(fp, "site(a,c,p)\n");
+			//fprintf(fp, "energy(g,an,ag,sol)\n");
+         fprintf(fp, "energy(s,c,g)\n");
 			fclose(fp);
 			sprintf(sbuff, "%s>rxn01.log", env.delphi_exe);
 			system(sbuff);
@@ -1306,7 +1323,8 @@ int conf_rxn(int kr, int kc, PROT prot)
 			   fprintf(fp, "scale=%.6f\n", (env.grids_per_ang+0.01*(float)n_retry)/pow(2,del_runs-1-i));
 			   fprintf(fp, "in(unpdb,file=\"fort.13\")\n");
 			   fprintf(fp, "in(phi,file=\"run%02d.phi\")\n", i);
-			   fprintf(fp, "indi=%.1f\n", env.epsilon_prot);
+			   //fprintf(fp, "in(phi,file=phimap%02d.cube)\n",i);
+            fprintf(fp, "indi=%.1f\n", env.epsilon_prot);
 			   fprintf(fp, "exdi=%.1f\n", env.epsilon_solv);
 			   fprintf(fp, "ionrad=%.1f\n", env.ionrad);
 			   fprintf(fp, "prbrad=%.1f\n", env.radius_probe);
@@ -1315,8 +1333,10 @@ int conf_rxn(int kr, int kc, PROT prot)
 			   fprintf(fp, "center(777, 777, 0)\n");
 			   fprintf(fp, "out(frc,file=\"run%02d.frc\")\n", i+1);
 			   fprintf(fp, "out(phi,file=\"run%02d.phi\")\n", i+1);
-			   fprintf(fp, "site(a,c,p)\n");
-			   fprintf(fp, "energy(g,an,ag,sol)\n");
+			   //fprintf(fp, "out(phi,file=phimap%02d.cube, format=cube)\n",i+1);
+            fprintf(fp, "site(a,c,p)\n");
+			   //fprintf(fp, "energy(g,an,ag,sol)\n");
+            fprintf(fp, "energy(s,c,g)\n");
 			   fclose(fp);
 			   sprintf(sbuff, "%s>rxn%02d.log", env.delphi_exe, i+1);
 			   system(sbuff);
@@ -1444,8 +1464,10 @@ int conf_rxn(int kr, int kc, PROT prot)
 				fprintf(fp, "center(777, 777, 0)\n");
 				fprintf(fp, "out(frc,file=\"run01.frc\")\n");
 				fprintf(fp, "out(phi,file=\"run01.phi\")\n");
-				fprintf(fp, "site(a,c,p)\n");
-				fprintf(fp, "energy(g,an,ag,sol)\n");
+				//fprintf(fp, "out(phi,file=phimap01.cube, format=cube)\n");
+            fprintf(fp, "site(a,c,p)\n");
+				//fprintf(fp, "energy(g,an,ag,sol)\n");
+            fprintf(fp, "energy(s,c,g)\n");
 				fclose(fp);
 				sprintf(sbuff, "%s>rxn01.log", env.delphi_exe);
 				system(sbuff);
@@ -1458,7 +1480,8 @@ int conf_rxn(int kr, int kc, PROT prot)
 				   fprintf(fp, "in(unpdb,file=\"fort.13\")\n");
 				   fprintf(fp, "in(frc,file=\"site.15\")\n");
 				   fprintf(fp, "in(phi,file=\"run%02d.phi\")\n", i);
-				   fprintf(fp, "indi=%.1f\n", env.epsilon_prot);
+				   //fprintf(fp, "in(phi,file=phimap%02d.cube)\n",i);
+               fprintf(fp, "indi=%.1f\n", env.epsilon_prot);
 				   fprintf(fp, "exdi=%.1f\n", env.epsilon_solv);
 				   fprintf(fp, "ionrad=%.1f\n", env.ionrad);
 				   fprintf(fp, "salt=%.2f\n", env.salt);
@@ -1466,8 +1489,10 @@ int conf_rxn(int kr, int kc, PROT prot)
 				   fprintf(fp, "center(777, 777, 0)\n");
 				   fprintf(fp, "out(frc,file=\"run%02d.frc\")\n", i+1);
 				   fprintf(fp, "out(phi,file=\"run%02d.phi\")\n", i+1);
-				   fprintf(fp, "site(a,c,p)\n");
-				   fprintf(fp, "energy(g,an,ag,sol)\n");
+				   //fprintf(fp, "out(phi,file=phimap%02d.cube, format=cube)\n",i+1);
+               fprintf(fp, "site(a,c,p)\n");
+				   //fprintf(fp, "energy(g,an,ag,sol)\n");
+               fprintf(fp, "energy(s,c,g)\n");
 				   fclose(fp);
 				   sprintf(sbuff, "%s>rxn%02d.log", env.delphi_exe, i+1);
 				   system(sbuff);
@@ -1583,8 +1608,10 @@ int conf_rxn(int kr, int kc, PROT prot)
 					fprintf(fp, "center(777, 777, 0)\n");
 					fprintf(fp, "out(frc,file=\"run01.frc\")\n");
 					fprintf(fp, "out(phi,file=\"run01.phi\")\n");
-					fprintf(fp, "site(a,c,p)\n");
-					fprintf(fp, "energy(g,an,ag,sol)\n");
+					//fprintf(fp, "out(phi,file=phimap01.cube, format=cube)\n");
+               fprintf(fp, "site(a,c,p)\n");
+					//fprintf(fp, "energy(g,an,ag,sol)\n");
+               fprintf(fp, "energy(s,c,g)\n");
 					fclose(fp);
 					sprintf(sbuff, "%s>rxn01.log", env.delphi_exe);
 					system(sbuff);
@@ -1597,7 +1624,8 @@ int conf_rxn(int kr, int kc, PROT prot)
 					   fprintf(fp, "in(unpdb,file=\"fort.13\")\n");
 					   fprintf(fp, "in(frc,file=\"site.15\")\n");
 					   fprintf(fp, "in(phi,file=\"run%02d.phi\")\n", i);
-					   fprintf(fp, "indi=%.1f\n", env.epsilon_prot);
+					   //fprintf(fp, "in(phi,file=phimap%02d.cube)\n",i);
+                  fprintf(fp, "indi=%.1f\n", env.epsilon_prot);
 					   fprintf(fp, "exdi=%.1f\n", env.epsilon_solv);
 					   fprintf(fp, "ionrad=%.1f\n", env.ionrad);
 					   fprintf(fp, "salt=%.2f\n", env.salt);
@@ -1605,8 +1633,10 @@ int conf_rxn(int kr, int kc, PROT prot)
 					   fprintf(fp, "center(777, 777, 0)\n");
 					   fprintf(fp, "out(frc,file=\"run%02d.frc\")\n", i+1);
 					   fprintf(fp, "out(phi,file=\"run%02d.phi\")\n", i+1);
-					   fprintf(fp, "site(a,c,p)\n");
-					   fprintf(fp, "energy(g,an,ag,sol)\n");
+					   //fprintf(fp, "out(phi,file=phimap%02d.cube, format=cube)\n",i+1);
+                  fprintf(fp, "site(a,c,p)\n");
+					   //fprintf(fp, "energy(g,an,ag,sol)\n");
+                  fprintf(fp, "energy(s,c,g)\n");
 					   fclose(fp);
 					   sprintf(sbuff, "%s>rxn%02d.log", env.delphi_exe, i+1);
 					   system(sbuff);
@@ -1659,7 +1689,6 @@ int conf_rxn(int kr, int kc, PROT prot)
 			rxn_min = rxn_min - rxn_res_min;
 			}
 		}
-	 	
       }
    }
    /* by conformer rxn energy printer */
@@ -1908,7 +1937,6 @@ int add_dummies(PROT prot)
 
    return n;
 }
-
 
 int write_pqr(FILE *pqr)
 {  int counter;

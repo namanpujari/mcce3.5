@@ -245,16 +245,16 @@ int monte()
 
         /* Do annealing */
         /*
-        fprintf(fp, "Conformer list before reduction: E_base = %10.3f\n", E_base);
+        printf("Conformer list before reduction: E_base = %10.3f\n", E_base);
         for (j=0; j<conflist.n_conf; j++) {
-            fprintf(fp, "%s %c %4.2f self = %8.3f mfe = %8.3f\n", conflist.conf[j].uniqID, 
+            printf("%s %c %4.2f self = %8.3f mfe = %8.3f\n", conflist.conf[j].uniqID, 
             conflist.conf[j].on,
             conflist.conf[j].occ,
             conflist.conf[j].E_self0,
             conflist.conf[j].E_mfe);
         }
-        fprintf(fp, "\n"); fflush(fp);
-        */
+        printf("\n"); fflush(fp);*/
+        
 
         counter = 0;
         for (j=0; j<n_free; j++) counter+=free_res[j].n;

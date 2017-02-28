@@ -260,22 +260,22 @@ int load_energies(EMATRIX *ematrix, char *dir, int verbose)
     /* allocate memeory */
     if (ematrix->n > 0) {  /* existing table */
        if (ematrix->n != n_conf) {
-          printf("error in loading Energy lookup table size %d on to %d\n", n_conf, ematrix->n);
+          printf(ANSI_COLOR_RED "error in loading Energy lookup table size %d on to %d\n" ANSI_COLOR_RESET , n_conf, ematrix->n);
           return USERERR;
        }
     }
     else {
        if (!(ematrix->conf = (CONF_HEAD *) calloc(n_conf, sizeof(CONF_HEAD)))) {
-          printf("   Memory error in A load_energies\n");
+          printf(ANSI_COLOR_RED "   Memory error in A load_energies\n" ANSI_COLOR_RESET);
           return 0; /* none loaded and memory cleared */
        }
        if (!(ematrix->pw = (PAIRWISE **) calloc(n_conf, sizeof(PAIRWISE *)))) {
-          printf("   Memory error in B load_energies\n");
+          printf(ANSI_COLOR_RED "   Memory error in B load_energies\n" ANSI_COLOR_RESET);
           return 0; /* none loaded and memory cleared */
        }
        for (i=0; i<n_conf; i++) {
           if (!(ematrix->pw[i] = (PAIRWISE *) calloc(n_conf, sizeof(PAIRWISE)))) {
-             printf("   Memory error in C load_energies\n");
+             printf(ANSI_COLOR_RED "   Memory error in C load_energies\n" ANSI_COLOR_RESET);
              return 0; /* none loaded and memory cleared */
           }
        }

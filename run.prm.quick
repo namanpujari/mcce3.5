@@ -130,7 +130,7 @@ t        Do entropy correction                              (MONTE_TSX)
 
 
 Step 5:
-t        Display DelPhi potential map                       (DO_POTENTIAL_MAP)
+f        Display DelPhi potential map                       (DISPLAY_POTENTIAL_MAP)
 f        Only the backbone                                  (ONLY_BACKBONE) 
 7.0      Specify titration point                            (POTENTIAL_MAP_POINT)
 /home/mcce/mcce3.5/bin/delphicpp_release DelPhi executable for potential map              (DELPHI_POTENTIAL_EXE)
