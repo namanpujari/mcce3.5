@@ -198,7 +198,6 @@ int postrun()
 
 
     if (env.display_potential_map){
-        printf("Salah oqnefoqnf\n");
         if (potential_map()) {
             printf("   Fatal error detected in potential_map().\n");
             return USERERR;
@@ -858,7 +857,7 @@ int potential_map(){
     }
     prot = load_pdb(fp);
     fclose(fp);
-    printf("Salah   Sreaching for the most occupied conformer for each residue in fort.38 at %cH %d\n",env.titr_type,env.potential_map_point);
+    printf("   Sreaching for the most occupied conformer for each residue in fort.38 at %cH %d\n",env.titr_type,env.potential_map_point);
     
     // Writing radii file for delphi
     fp2 = fopen("fort.11", "w");
@@ -925,11 +924,11 @@ int potential_map(){
                                 prot.res[i].conf[0].atom[k].name);
                 //printf("%s %s %s  %5.2f\n", prot.res[i].conf[0].confName, prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].rad);
             }
-        if (abs(residue_charge) > 0.0) printf(ANSI_COLOR_BLUE"   Warning res %3s%c%04d BK charge is non-zero %5.2f" ANSI_COLOR_RESET "\n",prot.res[i].resName, prot.res[i].chainID, prot.res[i].resSeq, residue_charge);
+        if (abs(residue_charge) > 0.0) printf(ANSI_COLOR_BLUE "   Warning res %3s%c%04d BK charge is non-zero %5.2f" ANSI_COLOR_RESET "\n",prot.res[i].resName, prot.res[i].chainID, prot.res[i].resSeq, residue_charge);
         residue_charge = 0.0;
         }else{  // This will use the most occ. conf. as a default to output pot. map
             for (k=0; k<prot.res[i].conf[0].n_atom; k++) {
-                printf("Salah: %s\n", prot.res[i].conf[0].atom[k].on);
+                //printf("Salah: %s\n", prot.res[i].conf[0].atom[k].on);
                 fprintf(fp2,"%-05s %s      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].rad);
                 fprintf(fp3,"%-05s %s %d      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].resSeq, 0.00);//prot.res[i].conf[0].atom[k].crg);
                 //protein_charge += prot.res[i].conf[0].atom[k].crg;
