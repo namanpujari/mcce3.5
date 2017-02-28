@@ -330,8 +330,8 @@ float vdw_conf_fast(int i_res, int i_conf, int j_res, int j_conf, PROT prot, int
                 }
                 if (done) continue;
                 
-                /* print large atom-atom vdw 
-                if (e > 2.0) {
+                // print large atom-atom vdw 
+                if (e > 10.0) {
                     if (!i_conf || !j_conf || (i_res==j_res && i_conf==j_conf)) {
                         //debug_fp = fopen(env.debug_log,"a");
                         //if (!debug_fp) debug_fp = stdout;
@@ -342,7 +342,7 @@ float vdw_conf_fast(int i_res, int i_conf, int j_res, int j_conf, PROT prot, int
                         //fclose(debug_fp);
                     }
                 }
-                 print end */
+                //print end 
                 
                 pair_vdw += e;
                 //printf("%s-%s: %8.3f\n",iatom_p->name,jatom_p->name,e);

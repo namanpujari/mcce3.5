@@ -44,13 +44,15 @@
 #define  VDW_ELIMIT_FAR   0
 
 #define ANSI_COLOR_BLUE    "\x1b[1;34m"
+#define ANSI_COLOR_RED     "\e1b[0;31m"
 #define ANSI_COLOR_RESET   "\x1b[0m"
+
 
 /* DATA prototype for Pascal Msc*/
 typedef struct {
-        int *res_ids;/*core of the patch*/
-        int *boundary1;/*1st boundary surrounding the core up to a distance of 'b1_param' angstrom*/
-        int *boundary2;/*2nd boundary (fixed) surrounding the 1st boundary up to a distance of 'b2_param' + 'b1_param' angstrom*/
+        int *res_ids;    /*core of the patch*/
+        int *boundary1;  /*1st boundary surrounding the core up to a distance of 'b1_param' angstrom*/
+        int *boundary2;  /*2nd boundary (fixed) surrounding the 1st boundary up to a distance of 'b2_param' + 'b1_param' angstrom*/
         int b1_count;
         int b2_count;
         int res_count;
@@ -765,7 +767,7 @@ typedef struct {
     char mfe_pka;
     char display_potential_map;
     char only_backbone;
-    int  potential_map_point;
+    float  potential_map_point;
     char delphi_potential_exe[256];
 
 
