@@ -837,6 +837,7 @@ int postrun_fitit()
     return 0;
 }
 
+
 int potential_map(){
 
     FILE *fp, *fp2, *fp3;
