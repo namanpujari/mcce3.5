@@ -904,50 +904,56 @@ int potential_map(){
     fp = fopen("step5_out.pdb", "w");
     for (i=0; i<prot.n_res; i++) {
         if (env.only_backbone){   // If user want only BK pot. map (keep charges of BK)
-            for (k=0; k<prot.res[i].conf[0].n_atom; k++) {
-                fprintf(fp2,"%-05s %s      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].rad);
-                fprintf(fp3,"%-05s %s %d      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].resSeq, prot.res[i].conf[0].atom[k].crg);
-                //fprintf(fp3,"%-05s %s      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].crg);
-                residue_charge += prot.res[i].conf[0].atom[k].crg;
-                if (c<99999) c++;
-                fprintf(fp, "ATOM  %5d %4s %3s %c%4d    %8.3f%8.3f%8.3f%7.3f%7.3f           %1s\n",
-                                c, 
-                                prot.res[i].conf[0].atom[k].name,
-                                //prot.res[i].conf[0].altLoc,
-                                prot.res[i].resName,
-                                prot.res[i].chainID,
-                                prot.res[i].resSeq,
-                                prot.res[i].conf[0].atom[k].xyz.x,
-                                prot.res[i].conf[0].atom[k].xyz.y,
-                                prot.res[i].conf[0].atom[k].xyz.z,
-                                1.00,
-                                0.00,
-                                prot.res[i].conf[0].atom[k].name);
-                //printf("%s %s %s  %5.2f\n", prot.res[i].conf[0].confName, prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].rad);
+            if (strchr(prot.res[i].conf[0].confName, 'BK')){
+                for (k=0; k<prot.res[i].conf[0].n_atom; k++) {
+                    if (strlen(prot.res[i].conf[0].atom[k].name) != 0){
+                        fprintf(fp2,"%-05s %s      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].rad);
+                        fprintf(fp3,"%-05s %s %d      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].resSeq, prot.res[i].conf[0].atom[k].crg);
+                        //fprintf(fp3,"%-05s %s      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].crg);
+                        residue_charge += prot.res[i].conf[0].atom[k].crg;
+                        if (c<99999) c++;
+                        fprintf(fp, "ATOM  %5d %4s %3s %c%4d    %8.3f%8.3f%8.3f%7.3f%7.3f           %1s\n",
+                                        c, 
+                                        prot.res[i].conf[0].atom[k].name,
+                                        //prot.res[i].conf[0].altLoc,
+                                        prot.res[i].resName,
+                                        prot.res[i].chainID,
+                                        prot.res[i].resSeq,
+                                        prot.res[i].conf[0].atom[k].xyz.x,
+                                        prot.res[i].conf[0].atom[k].xyz.y,
+                                        prot.res[i].conf[0].atom[k].xyz.z,
+                                        1.00,
+                                        0.00,
+                                        prot.res[i].conf[0].atom[k].name);
+                        //printf("%s %s %s  %5.2f\n", prot.res[i].conf[0].confName, prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].rad);
+                    }
+                }
             }
         if (abs(residue_charge) > 0.0) printf(ANSI_COLOR_BLUE "   Warning res %3s%c%04d BK charge is non-zero %5.2f" ANSI_COLOR_RESET "\n",prot.res[i].resName, prot.res[i].chainID, prot.res[i].resSeq, residue_charge);
         residue_charge = 0.0;
         }else{  // This will use the most occ. conf. as a default to output pot. map
-            for (k=0; k<prot.res[i].conf[0].n_atom; k++) { // Doing backbone
-                //printf("Salah: %s\n", prot.res[i].conf[0].atom[k].on);
-                fprintf(fp2,"%-05s %s      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].rad);
-                fprintf(fp3,"%-05s %s %d      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].resSeq, 0.00);//prot.res[i].conf[0].atom[k].crg);
-                //protein_charge += prot.res[i].conf[0].atom[k].crg;
-                if (c<99999) c++;
-                fprintf(fp, "ATOM  %5d %4s %3s %c%4d    %8.3f%8.3f%8.3f%7.3f%7.3f           %1s\n",
-                                c, 
-                                prot.res[i].conf[0].atom[k].name,
-                                //prot.res[i].conf[0].altLoc,
-                                prot.res[i].resName,
-                                prot.res[i].chainID,
-                                prot.res[i].resSeq,
-                                prot.res[i].conf[0].atom[k].xyz.x,
-                                prot.res[i].conf[0].atom[k].xyz.y,
-                                prot.res[i].conf[0].atom[k].xyz.z,
-                                1.00,
-                                2.00,
-                                prot.res[i].conf[0].atom[k].name);
-                //printf("%s %s %s  %5.2f\n", prot.res[i].conf[0].confName, prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].rad);
+            if (strchr(prot.res[i].conf[0].confName, 'BK')){
+                for (k=0; k<prot.res[i].conf[0].n_atom; k++) { // Doing backbone
+                    if (strlen(prot.res[i].conf[0].atom[k].name) != 0){
+                        fprintf(fp2,"%-05s %s      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].rad);
+                        fprintf(fp3,"%-05s %s %d      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].resSeq, 0.00);//prot.res[i].conf[0].atom[k].crg);
+                        //protein_charge += prot.res[i].conf[0].atom[k].crg;
+                        if (c<99999) c++;
+                        fprintf(fp, "ATOM  %5d %4s %3s %c%4d    %8.3f%8.3f%8.3f%7.3f%7.3f           %1s\n",
+                                        c, 
+                                        prot.res[i].conf[0].atom[k].name,
+                                        //prot.res[i].conf[0].altLoc,
+                                        prot.res[i].resName,
+                                        prot.res[i].chainID,
+                                        prot.res[i].resSeq,
+                                        prot.res[i].conf[0].atom[k].xyz.x,
+                                        prot.res[i].conf[0].atom[k].xyz.y,
+                                        prot.res[i].conf[0].atom[k].xyz.z,
+                                        1.00,
+                                        0.00,
+                                        prot.res[i].conf[0].atom[k].name);
+                    }    
+                }
             }
             for (j=0; j<prot.res[i].n_conf; j++){
                 if (!strchr(prot.res[i].conf[j].confName, 'BK')){
@@ -971,7 +977,7 @@ int potential_map(){
                                             prot.res[i].conf[j].atom[k].xyz.y,
                                             prot.res[i].conf[j].atom[k].xyz.z,
                                             1.00,
-                                            3.00,
+                                            0.00,
                                             prot.res[i].conf[j].atom[k].name);                        
                             }
                         }
