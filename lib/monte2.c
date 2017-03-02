@@ -327,8 +327,8 @@ int monte2() {
     monte_out(prot, env.titr_steps);
     
 	// curve fitting 
-    printf("   Fit titration curves to get pKa/Em ...\n");
-    fflush(stdout);
+    //printf("   Fit titration curves to get pKa/Em ...\n");
+    //fflush(stdout);
     //curve_fitting(prot,env.titr_steps);
     
     
