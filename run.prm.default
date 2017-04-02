@@ -114,6 +114,7 @@ step 3:
 0.15     Salt                                               (SALT)
 /home/mcce/mcce3.5/bin/delphi DelPhi executable             (DELPHI_EXE)
 /home/mcce/mcce3.5/bin/apbs APBS executable                 (APBS_EXE)
+/scratch                                                    (PBE_FOLDER)
 
 step 4:
 t        Using Yifan's monte carlo                          (MONTE_ADV_OPT)
