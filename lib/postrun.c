@@ -23,6 +23,8 @@ int MFE_ONLY = 0;
 #define NUNIQS 1000000
 
 
+
+
 /* normal pw is garanteed to be smaller than 2000. When it is is bigger than 5000, it is 
  * represents a value refenced to a clashed pair of conformers.
  */
@@ -70,6 +72,7 @@ struct STAT {
     float b;
     float chi2;
 };
+
 typedef struct  {
     int n;
     int *res;
@@ -85,13 +88,30 @@ typedef struct {
    //int trailer;
 } UNF;
 
-typedef struct {
-   UNF  unf[NUNIQS];      /* this number limits the number of atoms */
-   char head[NUNIQS][31]; /* head of the atom line */
-   int n;
-} ELE_BOUND;
 
+struct OccInRes {
+    char OccInRes_chainID;
+    int  OccInRes_resSeq;
+    int  OccInRes_iConf;
+    char *key;
+    float most_occupancy;
+    //struct OccInRes *next;
+};
 
+struct node {
+    int key;
+    float age;
+    char name[100];
+    char node_chainID;
+    int  node_resSeq;
+    int  node_iConf;
+    struct node *next;
+};
+
+struct hash {
+    struct node *head;
+    int count;
+};
 
 /* public variables */
 PROT     prot;
@@ -106,28 +126,32 @@ BIGLIST  *biglist;   /* same length as free residues */
 int      n_free, n_fixed, n_all, n_mfe;
 FILE     *fp;
 float    **occ_table;   
+float    **most_occ_table; 
 char **shead;
-
-ELE_BOUND ele_bound;
-
-
+struct hash *hashTable = NULL;
+int eleCount = 0;
 
 
-float postrun_fround3(float x);
-int   postrun_print_mfe(int i_res, float mfeP, FILE *pK_fp,  FILE *res_fp);
-int   postrun_get_mfe(int i_res, int t_point);     
-int   postrun_load_pairwise();
-int   postrun_load_pairwise_fround3();
-int   postrun_load_pairwise_vdw();
-int   postrun_load_occupancy();
-void  postrun_group_confs();
-int   postrun_fitit();
-int   postrun_load_conflist();
-int   potential_map();
-int   write_amber_siz(FILE *siz); 
+
+
+
+float  postrun_fround3(float x);
+int    postrun_print_mfe(int i_res, float mfeP, FILE *pK_fp,  FILE *res_fp);
+int    postrun_get_mfe(int i_res, int t_point);     
+int    postrun_load_pairwise();
+int    postrun_load_pairwise_fround3();
+int    postrun_load_pairwise_vdw();
+int    postrun_load_occupancy();
+void   postrun_group_confs();
+int    postrun_fitit();
+int    postrun_load_conflist();
+int    potential_map();
+int    write_amber_siz(FILE *siz); 
 struct STAT postrun_fit(float a, float b);
-float postrun_score(float v[]);
-void  postrun_dhill(float **p, float *y, int ndim, float ftol, float (*funk)(float []), int *nfunk);
+float  postrun_score(float v[]);
+void   postrun_dhill(float **p, float *y, int ndim, float ftol, float (*funk)(float []), int *nfunk);
+int    most_occ();
+struct OccInRes searchInHash(int key);
 
 
 int postrun()
@@ -157,6 +181,9 @@ int postrun()
 
     occ_table = (float **) malloc(conflist.n_conf*sizeof(float *));
     for (i=0; i<conflist.n_conf; i++) occ_table[i] = (float *) malloc(env.titr_steps * sizeof(float));
+
+    most_occ_table = (float **) malloc(conflist.n_conf*sizeof(float *));
+    for (i=0; i<conflist.n_conf; i++) most_occ_table[i] = (float *) malloc(env.titr_steps * sizeof(float));
 
     all_res = NULL;
     free_res = NULL;
@@ -838,11 +865,96 @@ int postrun_fitit()
 }
 
 
+struct node * createNode(int key, char *name, float age, char node_chainID, int node_resSeq, int node_iConf) {
+    struct node *newnode;
+    newnode = (struct node *) malloc(sizeof(struct node));
+    newnode->key = key;
+    newnode->age = age;
+    newnode->node_chainID = node_chainID;
+    newnode->node_resSeq = node_resSeq;
+    newnode->node_iConf = node_iConf;
+    strcpy(newnode->name, name);
+    newnode->next = NULL;
+    return newnode;
+}
+
+void insertToHash(int key, char *name, float age, char node_chainID, int node_resSeq) {
+    int hashIndex = key % eleCount;
+    int int_confId;
+    char *confId = (char*) malloc(3);
+    strncpy(confId, name+11, 15);
+    int_confId = (int) strtol(confId, (char **)NULL, 10);
+    
+    struct node *newnode = createNode(key, name, age, node_chainID, node_resSeq, int_confId);
+
+    /* head of list for the bucket with index "hashIndex" */
+    if (!hashTable[hashIndex].head) {
+        hashTable[hashIndex].head = newnode;
+        hashTable[hashIndex].count = 1;
+        return;
+    }
+    /* adding new node to the list */
+    newnode->next = (hashTable[hashIndex].head);
+    /*
+     * update the head of the list and no of
+     * nodes in the current bucket
+     */
+    hashTable[hashIndex].head = newnode;
+    hashTable[hashIndex].count++;
+    return;
+}
+
+struct OccInRes searchInHash(int key) {
+    int hashIndex = key % eleCount, flag = 0, i = 0;
+    struct node *myNode;
+    myNode = hashTable[hashIndex].head;
+    float max=0.0;
+    char *most_occ_confname;
+    char chainID;
+    int resSeq;
+    int iConf;
+
+
+    if (!myNode) {
+        //printf("Search element unavailable in hash table\n");
+        return;
+    }
+    while (myNode != NULL) {
+        if (myNode->key == key) {
+            //printf("VoterID  : %d\n", myNode->key);
+            //printf("Name     : %s\n", myNode->name);
+            //printf("Age      : %5.2f\n", myNode->age);
+            flag = 1;
+            if (myNode->age > max){
+                max = myNode->age;
+                most_occ_confname = myNode->name;
+                chainID = myNode->node_chainID;
+                resSeq = myNode->node_resSeq;
+                iConf = myNode->node_iConf;
+                //break;
+            }
+        }
+        myNode = myNode->next;
+    }
+
+    if (!flag)
+        printf("Search element unavailable in hash table\n");
+    
+    struct OccInRes result;
+    result.key = most_occ_confname;
+    result.most_occupancy = max;
+    result.OccInRes_chainID = chainID;
+    result.OccInRes_resSeq = resSeq;
+    result.OccInRes_iConf = iConf;
+    //printf("%d %s max: %5.2f\n",key, most_occ_confname, max);    
+    return result;
+}
+
 int potential_map(){
 
-    FILE *fp, *fp2, *fp3;
+    FILE *fp, *fp2, *fp3, *fort11, *fort12, *step5_out, *fort10;
     char sbuff[MAXCHAR_LINE];
-    int i, j, k,c, iConf, n_retry, ic, a;
+    int i, j, k,c, iConf, n_retry, ic, a, most_occ_conf_list;
     int conf_counter;
     int titration_point;
     char *tok;
@@ -853,6 +965,11 @@ int potential_map(){
     n_retry = 0; /* reset delphi failure counter for this conformer */
     a = 0;
     c = 0;
+    struct OccInRes result;
+
+    eleCount = conflist.n_conf*sizeof(int *);
+    hashTable = (struct hash *) calloc(eleCount, sizeof(struct hash));
+
     if (!(fp=fopen(STEP2_OUT, "r"))) {
        printf(ANSI_COLOR_RED "   FATAL: potential_map(): \"No step 2 output \"%s\".\n" ANSI_COLOR_RESET, STEP2_OUT);
        return USERERR;
@@ -861,157 +978,125 @@ int potential_map(){
     fclose(fp);
     printf("   Sreaching for the most occupied conformer for each residue in fort.38 at %cH %d\n",env.titr_type,env.potential_map_point);
     
+    
     // Writing radii file for delphi
-    fp2 = fopen("fort.11", "w");
-    fprintf(fp2,"!\n");
-    fprintf(fp2,"!   This file was created from MCCE3.5 topology files\n");
-    fprintf(fp2,"!    Radius of all hydrogens with\n");
-    fprintf(fp2,"! Column 1-6: Atom name; column 7-12: Residuename;\n");
-    fprintf(fp2,"! column 13-18: atom size.\n");
-    fprintf(fp2,"atom__res_radius_\n");
-    fprintf(fp2,"1H          1.250\n");
-    fprintf(fp2,"2H          1.250\n");
-    fprintf(fp2,"3H          1.250\n");
-    fprintf(fp2,"H1          1.250\n");
-    fprintf(fp2,"H2          1.250\n");
-    fprintf(fp2,"H3          1.250\n");
-    fprintf(fp2,"OXT         1.480\n");
-    fprintf(fp2,"\n");
+    fort11 = fopen("fort.11", "w");
+    fprintf(fort11,"!\n");
+    fprintf(fort11,"!   This file was created from MCCE3.5 topology files\n");
+    fprintf(fort11,"!    Radius of all hydrogens with\n");
+    fprintf(fort11,"! Column 1-6: Atom name; column 7-12: Residuename;\n");
+    fprintf(fort11,"! column 13-18: atom size.\n");
+    fprintf(fort11,"atom__res_radius_\n");
+    fprintf(fort11,"1H          1.250\n");
+    fprintf(fort11,"2H          1.250\n");
+    fprintf(fort11,"3H          1.250\n");
+    fprintf(fort11,"H1          1.250\n");
+    fprintf(fort11,"H2          1.250\n");
+    fprintf(fort11,"H3          1.250\n");
+    fprintf(fort11,"OXT         1.480\n");
+    fprintf(fort11,"\n");
 
-    // Writing charge file for delphi
-    fp3 = fopen("fort.12", "w");
-    fprintf(fp3,"!\n");
-    fprintf(fp3,"!   This file was created from MCCE3.5 topology files\n");
-    fprintf(fp3,"!    Radius of all hydrogens with\n");
-    fprintf(fp3,"! Column 1-6: atom name; column 7-9: residue name;\n");
-    fprintf(fp3,"! column 10-12: residue number; column 14: chain name;\n");
-    fprintf(fp3,"! column 15-23: charge magnitude. For example:\n");
-    fprintf(fp3,"! CA    ARG130 B -0.2637 In is a valid format\n");
-    fprintf(fp3,"atom__resnumbc_charge_\n");
-    fprintf(fp3,"1H              0.0906 !!! Hydrogen of CA backbone\n");
-    fprintf(fp3,"2H              0.0906\n");
-    fprintf(fp3,"3H              0.0906\n");
-    fprintf(fp3,"\n");
-    fprintf(fp3,"H1              0.4240 !!! Hydrogen for N-terminal residue\n");
-    fprintf(fp3,"H2              0.4240 !!!\n");
-    fprintf(fp3,"H3              0.4240 !!!\n");
-    fprintf(fp3,"\n");
+
+    fort12 = fopen("fort.12", "w");
+    fprintf(fort12,"!\n");
+    fprintf(fort12,"!   This file was created from MCCE3.5 topology files\n");
+    fprintf(fort12,"!    Radius of all hydrogens with\n");
+    fprintf(fort12,"! Column 1-6: atom name; column 7-9: residue name;\n");
+    fprintf(fort12,"! column 10-12: residue number; column 14: chain name;\n");
+    fprintf(fort12,"! column 15-23: charge magnitude. For example:\n");
+    fprintf(fort12,"! CA    ARG130 B -0.2637 In is a valid format\n");
+    fprintf(fort12,"atom__resnumbc_charge_\n");
+    fprintf(fort12,"1H              0.0906 !!! Hydrogen of CA backbone\n");
+    fprintf(fort12,"2H              0.0906\n");
+    fprintf(fort12,"3H              0.0906\n");
+    fprintf(fort12,"\n");
+    fprintf(fort12,"H1              0.4240 !!! Hydrogen for N-terminal residue\n");
+    fprintf(fort12,"H2              0.4240 !!!\n");
+    fprintf(fort12,"H3              0.4240 !!!\n");
+    fprintf(fort12,"\n");
+
+    step5_out = fopen("step5_out.pdb", "w");
     
 
+    // group conf. into res.
+    for (i=0; i<conflist.n_conf; i++){
+        insertToHash(conflist.conf[i].resSeq, conflist.conf[i].uniqID, occ_table[i][0], conflist.conf[i].chainID, conflist.conf[i].resSeq);
+    }
+
     
-    // Writing PDB file
-    //printf(ANSI_COLOR_BLUE "This text is BLUE!"    ANSI_COLOR_RESET "\n");
-    //printf(ANSI_COLOR_BLUE "Warning res BK charge is non-zero %s" ANSI_COLOR_RESET "\n", "Salah" );
-    fp = fopen("step5_out.pdb", "w");
-    for (i=0; i<prot.n_res; i++) {
-        if (env.only_backbone){   // If user want only BK pot. map (keep charges of BK)
+    if (env.only_backbone){
+        for (i=0; i<prot.n_res; i++){
+            iConf =1;
+            result = searchInHash(prot.res[i].resSeq);
             if (strchr(prot.res[i].conf[0].confName, 'BK')){
-                for (k=0; k<prot.res[i].conf[0].n_atom; k++) {
+                for (k=0; k<prot.res[i].conf[0].n_atom; k++){
                     if (strlen(prot.res[i].conf[0].atom[k].name) != 0){
-                        fprintf(fp2,"%-05s %s      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].rad);
-                        fprintf(fp3,"%-05s %s %d      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].resSeq, prot.res[i].conf[0].atom[k].crg);
-                        //fprintf(fp3,"%-05s %s      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].crg);
-                        residue_charge += prot.res[i].conf[0].atom[k].crg;
-                        if (c<99999) c++;
-                        fprintf(fp, "ATOM  %5d %4s %3s %c%4d    %8.3f%8.3f%8.3f%7.3f%7.3f           %1s\n",
-                                        c, 
-                                        prot.res[i].conf[0].atom[k].name,
-                                        //prot.res[i].conf[0].altLoc,
-                                        prot.res[i].resName,
-                                        prot.res[i].chainID,
-                                        prot.res[i].resSeq,
-                                        prot.res[i].conf[0].atom[k].xyz.x,
-                                        prot.res[i].conf[0].atom[k].xyz.y,
-                                        prot.res[i].conf[0].atom[k].xyz.z,
-                                        1.00,
-                                        0.00,
-                                        prot.res[i].conf[0].atom[k].name);
-                        //printf("%s %s %s  %5.2f\n", prot.res[i].conf[0].confName, prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].rad);
+                        protein_charge += prot.res[i].conf[0].atom[k].crg;
+                        fprintf(fort12,"%-05s %s %d      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].resSeq, prot.res[i].conf[0].atom[k].crg);
                     }
                 }
             }
-        if (abs(residue_charge) > 0.0) printf(ANSI_COLOR_BLUE "   Warning res %3s%c%04d BK charge is non-zero %5.2f" ANSI_COLOR_RESET "\n",prot.res[i].resName, prot.res[i].chainID, prot.res[i].resSeq, residue_charge);
-        residue_charge = 0.0;
-        }else{  // This will use the most occ. conf. as a default to output pot. map
-            if (strchr(prot.res[i].conf[0].confName, 'BK')){
-                for (k=0; k<prot.res[i].conf[0].n_atom; k++) { // Doing backbone
-                    if (strlen(prot.res[i].conf[0].atom[k].name) != 0){
-                        fprintf(fp2,"%-05s %s      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].rad);
-                        fprintf(fp3,"%-05s %s %d      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].resSeq, 0.00);//prot.res[i].conf[0].atom[k].crg);
-                        //protein_charge += prot.res[i].conf[0].atom[k].crg;
-                        if (c<99999) c++;
-                        fprintf(fp, "ATOM  %5d %4s %3s %c%4d    %8.3f%8.3f%8.3f%7.3f%7.3f           %1s\n",
-                                        c, 
-                                        prot.res[i].conf[0].atom[k].name,
-                                        //prot.res[i].conf[0].altLoc,
-                                        prot.res[i].resName,
-                                        prot.res[i].chainID,
-                                        prot.res[i].resSeq,
-                                        prot.res[i].conf[0].atom[k].xyz.x,
-                                        prot.res[i].conf[0].atom[k].xyz.y,
-                                        prot.res[i].conf[0].atom[k].xyz.z,
-                                        1.00,
-                                        0.00,
-                                        prot.res[i].conf[0].atom[k].name);
-                    }    
-                }
-            }
-            for (j=0; j<prot.res[i].n_conf; j++){
-                if (!strchr(prot.res[i].conf[j].confName, 'BK')){
-                        titration_point = env.potential_map_point - env.titr_ph0;
-                        if (occ_table[a][titration_point] > 0.5){
+            for (j=0; j<prot.res[i].n_conf; j++){            
+                        if (result.OccInRes_chainID == prot.res[i].chainID && result.OccInRes_resSeq == prot.res[i].resSeq && result.OccInRes_iConf == iConf){
                             for (k=0; k<prot.res[i].conf[j].n_atom; k++){
-                                //printf("rad %s %s %s  %5.2f\n",prot.res[i].conf[j].confName, prot.res[i].conf[j].atom[k].name, prot.res[i].resName, prot.res[i].conf[j].atom[k].rad);
-                                //printf("crg %s %s %s  %5.2f\n",prot.res[i].conf[j].confName, prot.res[i].conf[j].atom[k].name, prot.res[i].resName, prot.res[i].conf[j].atom[k].crg);
-                                fprintf(fp2,"%-05s %s      %5.2f\n", prot.res[i].conf[j].atom[k].name, prot.res[i].resName, prot.res[i].conf[j].atom[k].rad);
-                                fprintf(fp3,"%-05s %s %d      %5.2f\n", prot.res[i].conf[j].atom[k].name, prot.res[i].resName, prot.res[i].resSeq, prot.res[i].conf[j].atom[k].crg);
-                                protein_charge += prot.res[i].conf[j].atom[k].crg;
-                                if (c<99999) c++;
-                                fprintf(fp, "ATOM  %5d %4s %3s %c%4d    %8.3f%8.3f%8.3f%7.3f%7.3f           %1s\n",
-                                            c, 
-                                            prot.res[i].conf[j].atom[k].name,
-                                            //prot.res[i].conf[j].altLoc,
-                                            prot.res[i].resName,
-                                            prot.res[i].chainID,
-                                            prot.res[i].resSeq,
-                                            prot.res[i].conf[j].atom[k].xyz.x,
-                                            prot.res[i].conf[j].atom[k].xyz.y,
-                                            prot.res[i].conf[j].atom[k].xyz.z,
-                                            1.00,
-                                            0.00,
-                                            prot.res[i].conf[j].atom[k].name);                        
+                                if (strlen(prot.res[i].conf[j].atom[k].name) != 0){
+                                    fprintf(fort11,"%-05s %s      %5.2f\n", prot.res[i].conf[j].atom[k].name, prot.res[i].resName, prot.res[i].conf[j].atom[k].rad);
+                                    if (c<99999) c++;
+                                    fprintf(step5_out, "ATOM %5d %4s %4s %4d    %8.3f%8.3f%8.3f%7.3f%7.3f           %1s\n",c, prot.res[i].conf[j].atom[k].name, prot.res[i].resName, prot.res[i].resSeq, prot.res[i].conf[j].atom[k].xyz.x, prot.res[i].conf[j].atom[k].xyz.y, prot.res[i].conf[j].atom[k].xyz.z, 1.00, 0.00, prot.res[i].conf[j].atom[k].name); 
+                                }
                             }
                         }
-                        a = a + 1;
-                }
+                        iConf++;
             }
+            fprintf(fort11,"\n");
+            fprintf(fort12,"\n");
         }
-        fprintf(fp2,"\n");
-        fprintf(fp3,"\n");
     }
-    printf("   Protein total charge = %5.2f\n",protein_charge);
-    fclose(fp2);
-    fclose(fp3);
-    fclose(fp);
+    else {
+        for (i=0; i<prot.n_res; i++){
+            iConf =1;
+            result = searchInHash(prot.res[i].resSeq);
+            for (j=0; j<prot.res[i].n_conf; j++){            
+                        if (result.OccInRes_chainID == prot.res[i].chainID && result.OccInRes_resSeq == prot.res[i].resSeq && result.OccInRes_iConf == iConf){
+                            for (k=0; k<prot.res[i].conf[j].n_atom; k++){
+                                if (strlen(prot.res[i].conf[j].atom[k].name) != 0){
+                                    fprintf(fort11,"%-05s %s      %5.2f\n", prot.res[i].conf[j].atom[k].name, prot.res[i].resName, prot.res[i].conf[j].atom[k].rad);
+                                    protein_charge += prot.res[i].conf[j].atom[k].crg;
+                                    fprintf(fort12,"%-05s %s %d      %5.2f\n", prot.res[i].conf[j].atom[k].name, prot.res[i].resName, prot.res[i].resSeq, prot.res[i].conf[j].atom[k].crg);
+                                    if (c<99999) c++;
+                                    fprintf(step5_out, "ATOM %5d %4s %4s %4d    %8.3f%8.3f%8.3f%7.3f%7.3f           %1s\n",c, prot.res[i].conf[j].atom[k].name, prot.res[i].resName, prot.res[i].resSeq, prot.res[i].conf[j].atom[k].xyz.x, prot.res[i].conf[j].atom[k].xyz.y, prot.res[i].conf[j].atom[k].xyz.z, 1.00, 0.00, prot.res[i].conf[j].atom[k].name); 
+                                }
+                            }
+                        }
+                        iConf++;
+            }
+            fprintf(fort11,"\n");
+            fprintf(fort12,"\n");
+        }
+    }
 
+    printf("   Protein total charge = %5.2f\n", protein_charge);
+    fclose(fort11);
+    fclose(fort12);
+    fclose(step5_out);
 
-    fp = fopen("fort.10", "w");
+    fort10 = fopen("fort.10", "w");
     //fprintf(fp, "gsize=%d\n", env.grids_delphi);
-    fprintf(fp, "scale=%.6f\n", (env.grids_per_ang));
-    fprintf(fp, "perfil=70.0\n");
-    fprintf(fp, "in(pdb,file=\"step5_out.pdb\")\n");
-    fprintf(fp, "in(siz,file=\"fort.11\")\n");
-    fprintf(fp, "in(crg,file=\"fort.12\")\n");
-    fprintf(fp, "indi=%.1f\n", env.epsilon_prot);
-    fprintf(fp, "exdi=%.1f\n", env.epsilon_solv);
-    fprintf(fp, "ionrad=%.1f\n", env.ionrad);
-    fprintf(fp, "prbrad=%.1f\n", env.radius_probe);
-    fprintf(fp, "salt=%.2f\n", env.salt);
-    fprintf(fp, "bndcon=2\n");
-    fprintf(fp, "out(phi,file=phimap01.cube, format=cube)\n");
-    fprintf(fp, "out(eps,file=epsmap01.eps)\n");
-    fprintf(fp, "energy(s,c,g)\n");
-    fclose(fp);
+    fprintf(fort10, "scale=%.6f\n", (env.grids_per_ang));
+    fprintf(fort10, "perfil=70.0\n");
+    fprintf(fort10, "in(pdb,file=\"step5_out.pdb\")\n");
+    fprintf(fort10, "in(siz,file=\"fort.11\")\n");
+    fprintf(fort10, "in(crg,file=\"fort.12\")\n");
+    fprintf(fort10, "indi=%.1f\n", env.epsilon_prot);
+    fprintf(fort10, "exdi=%.1f\n", env.epsilon_solv);
+    fprintf(fort10, "ionrad=%.1f\n", env.ionrad);
+    fprintf(fort10, "prbrad=%.1f\n", env.radius_probe);
+    fprintf(fort10, "salt=%.2f\n", env.salt);
+    fprintf(fort10, "bndcon=2\n");
+    fprintf(fort10, "out(phi,file=phimap01.cube, format=cube)\n");
+    fprintf(fort10, "out(eps,file=epsmap01.cube)\n");
+    fprintf(fort10, "energy(s,c,g)\n");
+    fclose(fort10);
     
     sprintf(sbuff, "%s>delphi%02d.log 2>/dev/null", env.delphi_potential_exe, 1);
     printf("   Running DelPhi to get potential map\n");
@@ -1626,8 +1711,8 @@ float postrun_dhtry(float **p, float *y, float *psum, int ndim, float (*funk)(fl
 int postrun_load_occupancy() 
 {
    FILE *fp;
-   int conf_counter, titr_step_counter, j;
-   char *tok;
+   int conf_counter, titr_step_counter, j, titr_step_counter_2;
+   char *tok, *tok_2;
    char sbuff[MAXCHAR_LINE];
    
    fp = fopen(OCC_TABLE, "r");
@@ -1637,26 +1722,45 @@ int postrun_load_occupancy()
 
    conf_counter = 0;
    while (fgets(sbuff, sizeof(sbuff), fp)) {
-      
+      //printf("%s\n", sbuff);
+      //if (strstr(sbuff, "DM") != NULL){
+          //printf("%s\n", sbuff);
+          //tok_2 = strtok (sbuff," \0");
+          //printf("tok:  %d\n", tok);
+          //titr_step_counter_2 = 0;
+          //while (tok_2 != NULL && titr_step_counter_2 < env.titr_steps)
+          //{
+             //tok_2 = strtok (NULL, " \0");
+             //most_occ_table[conf_counter][titr_step_counter_2] = atof(tok_2);
+             //++titr_step_counter_2;
+          //}
+      //}
+
       tok = strtok (sbuff," \0");
       titr_step_counter = 0;
+      titr_step_counter_2 = 0;
       while (tok != NULL && titr_step_counter < env.titr_steps)
       {
          tok = strtok (NULL, " \0");
          //printf("%d %f\n",conf_counter,atof(tok));
          //fflush(stdout);
+         //if (strstr(sbuff, "DM") == NULL){
+            //most_occ_table[conf_counter][titr_step_counter_2] = atof(tok);
+            //++titr_step_counter_2;
+         //}
          occ_table[conf_counter][titr_step_counter] = atof(tok);
+         //printf("tok: %5.2f\n", atof(tok));
          ++titr_step_counter;
       }
       ++conf_counter;
    }
+
+   conf_counter = 0;
+   
+
+   
    
    fclose(fp);
    return 0;
 }
-
-
-
-
-
 

@@ -108,6 +108,7 @@ step 3:
 1.4      Radius of the probe                                (RADIUS_PROBE)
 2.0      Ion radius                                         (IONRAD)
 0.15     Salt                                               (SALT)
+/scratch                                                    (PBE_FOLDER)
 /home/mcce/mcce3.5/bin/delphi DelPhi executable             (DELPHI_EXE)
 /home/mcce/mcce3.5/bin/apbs APBS executable                 (APBS_EXE)
 
