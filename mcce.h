@@ -44,7 +44,7 @@
 #define  VDW_ELIMIT_FAR   0
 
 #define ANSI_COLOR_BLUE    "\x1b[1;34m"
-#define ANSI_COLOR_RED     "\e1b[0;31m"
+#define ANSI_COLOR_RED     "\x1b[31m"
 #define ANSI_COLOR_RESET   "\x1b[0m"
 
 /* DATA prototype for Pascal Msc*/
@@ -771,7 +771,7 @@ typedef struct {
     char mfe_pka;
     char display_potential_map;
     char only_backbone;
-    float potential_map_point;
+    int  column_number;
     char  delphi_potential_exe[256];
     
 } ENV;

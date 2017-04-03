@@ -903,8 +903,8 @@ int get_env()
             }
             else env.only_backbone = 0;
         }
-        else if (strstr(sbuff, "(POTENTIAL_MAP_POINT)")) {
-                env.potential_map_point = atof(strtok(sbuff, " "));
+        else if (strstr(sbuff, "(COLUMN_NUMBER)")) {
+                env.column_number = atof(strtok(sbuff, " "));
         }
         else if (strstr(sbuff, "(DELPHI_POTENTIAL_EXE)")) {
             strcpy(env.delphi_potential_exe, strtok(sbuff, " "));

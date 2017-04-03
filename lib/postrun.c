@@ -960,6 +960,7 @@ int potential_map(){
     char *tok;
     float protein_charge;
     float residue_charge;
+    int occ_value;
     protein_charge = 0.0;
     residue_charge = 0.0;
     n_retry = 0; /* reset delphi failure counter for this conformer */
@@ -976,7 +977,7 @@ int potential_map(){
     }
     prot = load_pdb(fp);
     fclose(fp);
-    printf("   Sreaching for the most occupied conformer for each residue in fort.38 at %cH %d\n",env.titr_type,env.potential_map_point);
+    printf("   Sreaching for the most occupied conformer for each residue in fort.38 at %cH %d\n",env.titr_type,env.column_number);
     
     
     // Writing radii file for delphi
@@ -1020,7 +1021,7 @@ int potential_map(){
 
     // group conf. into res.
     for (i=0; i<conflist.n_conf; i++){
-        insertToHash(conflist.conf[i].resSeq, conflist.conf[i].uniqID, occ_table[i][0], conflist.conf[i].chainID, conflist.conf[i].resSeq);
+        insertToHash(conflist.conf[i].resSeq, conflist.conf[i].uniqID, occ_table[i][env.column_number], conflist.conf[i].chainID, conflist.conf[i].resSeq);
     }
 
     
