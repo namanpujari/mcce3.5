@@ -614,9 +614,10 @@ int postrun_fitit()
     else printf("   MFE: didn't specify mfe point, do mfe at pKa or Em \n");
     
     /* free pairwise */
-    for (i=0; i<conflist.n_conf; i++)
+    /*for (i=0; i<conflist.n_conf; i++)
         free(pairwise[i]);
-    free(pairwise);
+    free(pairwise);*/
+
     // load the pairwise interaction again, round the ele and vdw to keep consistent with mfe.py  
     if (postrun_load_pairwise_fround3()) {
         printf("   FATAL: mfe pairwise interaction not loaded\n");
