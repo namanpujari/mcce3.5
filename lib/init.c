@@ -93,11 +93,58 @@ int get_env()
     memset(&env, 0, sizeof(ENV));
 
     /* Default values */
+    //======== Salah edit this ======
+    env.titr_type = 'ph';
+    env.titr_ph0 = 0.0;
+    env.titr_phd = 1.0;
+    env.titr_eh0 = 0.0;
+    env.titr_ehd = 30.0;
+    env.titr_steps = 15;
+    dotrace = 1;
+    env.clash_distance = 2.0;
+    env.h2o_sascutoff = 0.05;
+    // step 2
+    env.rot_swap = 1;
+    env.rebuild_sc = 0;
+    env.pack = 0;
+    env.rotations = 0;
+    env.sas_cutoff = 1.00;
+    env.vdw_cutoff = 10.0;
+    env.repacks = 5000;
+    env.repack_cutoff = 0.01;
+    env.relax_e_thr = -1.0;
+    env.relax_nstates = 100;
+    env.relax_phi = 3.1415926/180.0;
+    env.relax_niter = 300;
+    env.relax_torq_thr = 0.5;
+    // Step 3
+    env.epsilon_solv = 80.0;
+    env.grids_delphi = 65;
+    env.grids_per_ang = 2.0;
+    env.radius_probe = 1.4;
+    // Step 4
+    env.monte_temp = 298.15;
+    env.monte_flips = 3;
+    env.monte_nstart = 100;
+    env.monte_neq = 300;
+    env.monte_reduce = 0.001;
+    env.monte_runs = 6;
+    env.monte_niter = 2000;
+    env.monte_trace = 50000;
+    env.nstate_max = 1000000;
+    // Step 5
+    env.display_potential_map = 0;
+    env.only_backbone = 0;
+    env.column_number = 0;
+    env.mfe_pka = 0;
+
+    
+    //===============================
+
     env.test_seed = -1;
     env.minimize_size = 0;
     env.PI                = 4.*atan(1.);
     env.d2r               = env.PI/180.;
-
     strcpy(env.debug_log,    "debug.log");
     strcpy(env.new_tpl,      "new.tpl");
     strcpy(env.progress_log, "progress.log");
@@ -147,7 +194,7 @@ int get_env()
     env.prune_vdw         = 2.0;
 
 
-    env.relax_n_hyd       =    6;
+    env.relax_n_hyd       =    36;
     env.relax_clash_thr   =  10.;
 
     env.recalc_tors     = 0;
@@ -161,7 +208,7 @@ int get_env()
     env.warn_pairwise     = 20.0;
     env.big_pairwise      = 5.0;
 
-    env.monte_adv_opt     =    0;
+    env.monte_adv_opt     =    1;
     env.anneal_temp_start = ROOMT;
     env.anneal_nstep      =    1;
     env.monte_tsx         =    0;
@@ -176,7 +223,7 @@ int get_env()
     strcpy(env.pbe_folder, "/tmp");
     env.delphi_clean      =  1;
     env.ionrad = 0.0;
-    env.salt =0.00;
+    env.salt = 0.10;
 
     /* default value for IPECE */
     memset(&env.ipece,0,sizeof(IPECE));
