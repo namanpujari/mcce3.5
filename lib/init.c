@@ -94,7 +94,7 @@ int get_env()
 
     /* Default values */
     //======== Salah edit this ======
-    env.titr_type = 'ph';
+    env.titr_type = 'p';
     env.titr_ph0 = 0.0;
     env.titr_phd = 1.0;
     env.titr_eh0 = 0.0;
@@ -137,8 +137,6 @@ int get_env()
     env.only_backbone = 0;
     env.column_number = 0;
     env.mfe_pka = 0;
-
-    
     //===============================
 
     env.test_seed = -1;
@@ -1020,7 +1018,7 @@ int get_env()
 				fprintf(tr, "%31s%31s\t%31s%31d\n", "(ANNEAL_NSTEP)", strtok(trbuff, " "), "env.anneal_nstep", env.anneal_nstep);
 			}
 			else if (strstr(trbuff, "(ANNEAL_TEMP_START)")) {
-				fprintf(tr, "%31s%31s\t%31s%31f\n", "(ANNEAL_TEMP_START)", strtok(trbuff, " "), "env.anneal_temp_start", env.anneal_temp_start);
+				fprintf(tr, "%31s%31s\t%31s%31d\n", "(ANNEAL_TEMP_START)", strtok(trbuff, " "), "env.anneal_temp_start", env.anneal_temp_start);
 			}
 			else if (strstr(trbuff, "(APBS_EXE)")) {
 				fprintf(tr, "%31s%31s\t%31s%31s\n", "(APBS_EXE)", strtok(trbuff, " "), "env.apbs_exe", env.apbs_exe);
@@ -1230,7 +1228,7 @@ int get_env()
 				fprintf(tr, "%31s%31s\t%31s%31f\n", "(MFE_CUTOFF)", strtok(trbuff, " "), "env.mfe_cutoff", env.mfe_cutoff);
 			}
 			else if (strstr(trbuff, "(MFE_POINT)")) {
-				fprintf(tr, "%31s%31s\t%31s%31f\n", "(MFE_POINT)", strtok(trbuff, " "), "env.mfe_flag", env.mfe_flag);
+				fprintf(tr, "%31s%31s\t%31s%31d\n", "(MFE_POINT)", strtok(trbuff, " "), "env.mfe_flag", env.mfe_flag);
 			}
 			else if (strstr(trbuff, "(MINIMIZE_SIZE)")) {
 				fprintf(tr, "%31s%31s\t%31s%31d\n", "(MINIMIZE_SIZE)", strtok(trbuff, " "), "env.minimize_size", env.minimize_size);
