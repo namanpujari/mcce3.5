@@ -1,0 +1,36 @@
+#==============  Needed parameters
+prot.pdb                                                    (INPDB)
+t        step 1: pre-run, pdb-> mcce pdb                    (DO_PREMCCE)
+t        step 2: make rotatmers                             (DO_ROTAMERS)
+t        step 3: do energy calculations                     (DO_ENERGY)
+t        step 4: monte carlo sampling                       (DO_MONTE)
+t        step 5: post monte carlo (pka)                     (DO_POSTMCCE)
+/home/mcce/mcce3.5                                          (MCCE_HOME)
+/home/mcce/mcce3.5/bin/delphi DelPhi executable             (DELPHI_EXE)
+/home/mcce/mcce3.5/bin/apbs APBS executable                 (APBS_EXE)
+/home/mcce/mcce3.5/bin/delphicpp_release                    (DELPHI_POTENTIAL_EXE)
+4.0      Protein dielectric constant for DelPhi             (EPSILON_PROT)
+
+#============== step 2:
+f        Do rotate?                                         (PACK)
+0        number of rotamers in a bond rotation              (ROTATIONS)
+f        Do relaxation on hydrogens                         (RELAX_H)
+36       default number of hydroxyl positions               (RELAX_N_HYD)
+3        number of cycles to relax rotamer clash            (HV_RELAX_NCYCLE)
+
+#============== step 3:
+80.0     Solvent dielectric constant for DelPhi             (EPSILON_SOLV)
+65       Grids in each DelPhi                               (GRIDS_DELPHI)
+2.0      The target grids per angstrom for DelPhi           (GRIDS_PER_ANG)
+/scratch                                                    (PBE_FOLDER)
+
+#============== step 4:
+t        Using Yifan's monte carlo                          (MONTE_ADV_OPT)
+-1       Random seed, -1 uses time as random seed           (MONTE_SEED)
+
+#============== step 5:
+f        Display DelPhi potential map                       (DISPLAY_POTENTIAL_MAP)
+f        Only the backbone                                  (ONLY_BACKBONE) 
+1       Specify titration point                            (COLUMN_NUMBER)
+f        Using mfe pK.out                                   (MFE_PKA)
+

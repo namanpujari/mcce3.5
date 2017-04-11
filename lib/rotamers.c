@@ -2338,11 +2338,11 @@ int place_missing(PROT prot, int handle_addconf) {
                         }
                     }
                     else if (n_known == 0) {
-                        int counter;
+                        //int counter;
                         bond_length = get_bond_length(conf_p,atom_p,to_complete_atoms[0]);
                         /* Define four corners of the box, atom would be placed on the conner. */
                         a = bond_length/sqrt(3.);
-                        counter = 0;
+                        //counter = 0;
                         v.x =  a; v.y =  a; v.z =  a; corners[0] = vector_vplusv(atom_p->xyz, v);
                         v.x = -a; v.y = -a; v.z =  a; corners[1] = vector_vplusv(atom_p->xyz, v);
                         v.x = -a; v.y =  a; v.z = -a; corners[2] = vector_vplusv(atom_p->xyz, v);

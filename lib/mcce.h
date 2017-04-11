@@ -676,9 +676,9 @@ typedef struct {
     int   monte_do_energy;
     int   monte_print_nonzero;
 
-    float anneal_temp_start;
-    float anneal_nstep;
-    float anneal_niter_step;
+    int anneal_temp_start; // changed from float to int on Apr 2017 by Salah
+    int anneal_nstep;      // changed from float to int on Apr 2017 by Salah
+    int anneal_niter_step; // changed from float to int on Apr 2017 by Salah
 
     char  titr_type;
     float titr_ph0;
