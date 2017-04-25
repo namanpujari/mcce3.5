@@ -93,20 +93,22 @@ struct OccInRes {
     char OccInRes_chainID;
     int  OccInRes_resSeq;
     int  OccInRes_iConf;
-    char *key;
+    char *key_resSeq;
     float most_occupancy;
     //struct OccInRes *next;
 };
 
+// create a Linked List
 struct node {
-    int key;
-    float age;
+    int key_resSeq;
+    float the_occupancy;
     char name[100];
     char node_chainID;
     int  node_resSeq;
     int  node_iConf;
     struct node *next;
 };
+
 
 struct hash {
     struct node *head;
@@ -151,7 +153,7 @@ struct STAT postrun_fit(float a, float b);
 float  postrun_score(float v[]);
 void   postrun_dhill(float **p, float *y, int ndim, float ftol, float (*funk)(float []), int *nfunk);
 int    most_occ();
-struct OccInRes searchInHash(int key);
+struct OccInRes searchInHash(int key_resSeq);
 
 
 int postrun()
@@ -614,9 +616,9 @@ int postrun_fitit()
     else printf("   MFE: didn't specify mfe point, do mfe at pKa or Em \n");
     
     /* free pairwise */
-    /*for (i=0; i<conflist.n_conf; i++)
+    for (i=0; i<conflist.n_conf; i++)
         free(pairwise[i]);
-    free(pairwise);*/
+    free(pairwise);
 
     // load the pairwise interaction again, round the ele and vdw to keep consistent with mfe.py  
     if (postrun_load_pairwise_fround3()) {
@@ -865,12 +867,11 @@ int postrun_fitit()
     return 0;
 }
 
-
-struct node * createNode(int key, char *name, float age, char node_chainID, int node_resSeq, int node_iConf) {
+struct node * createNode(int key_resSeq, char *name, float the_occupancy, char node_chainID, int node_resSeq, int node_iConf) {
     struct node *newnode;
     newnode = (struct node *) malloc(sizeof(struct node));
-    newnode->key = key;
-    newnode->age = age;
+    newnode->key_resSeq = key_resSeq;
+    newnode->the_occupancy = the_occupancy;
     newnode->node_chainID = node_chainID;
     newnode->node_resSeq = node_resSeq;
     newnode->node_iConf = node_iConf;
@@ -879,14 +880,14 @@ struct node * createNode(int key, char *name, float age, char node_chainID, int 
     return newnode;
 }
 
-void insertToHash(int key, char *name, float age, char node_chainID, int node_resSeq) {
-    int hashIndex = key % eleCount;
+void insertToHash(int key_resSeq, char *name, float the_occupancy, char node_chainID, int node_resSeq) {
+    int hashIndex = key_resSeq % eleCount;
     int int_confId;
     char *confId = (char*) malloc(3);
     strncpy(confId, name+11, 15);
     int_confId = (int) strtol(confId, (char **)NULL, 10);
     
-    struct node *newnode = createNode(key, name, age, node_chainID, node_resSeq, int_confId);
+    struct node *newnode = createNode(key_resSeq, name, the_occupancy, node_chainID, node_resSeq, int_confId);
 
     /* head of list for the bucket with index "hashIndex" */
     if (!hashTable[hashIndex].head) {
@@ -905,8 +906,8 @@ void insertToHash(int key, char *name, float age, char node_chainID, int node_re
     return;
 }
 
-struct OccInRes searchInHash(int key) {
-    int hashIndex = key % eleCount, flag = 0, i = 0;
+struct OccInRes searchInHash(int key_resSeq) {
+    int hashIndex = key_resSeq % eleCount, flag = 0, i = 0;
     struct node *myNode;
     myNode = hashTable[hashIndex].head;
     float max=0.0;
@@ -915,19 +916,18 @@ struct OccInRes searchInHash(int key) {
     int resSeq;
     int iConf;
 
-
     if (!myNode) {
         //printf("Search element unavailable in hash table\n");
         return;
     }
     while (myNode != NULL) {
-        if (myNode->key == key) {
-            //printf("VoterID  : %d\n", myNode->key);
+        if (myNode->key_resSeq == key_resSeq) {
+            //printf("VoterID  : %d\n", myNode->key_resSeq);
             //printf("Name     : %s\n", myNode->name);
-            //printf("Age      : %5.2f\n", myNode->age);
+            //printf("Age      : %5.2f\n", myNode->the_occupancy);
             flag = 1;
-            if (myNode->age > max){
-                max = myNode->age;
+            if (myNode->the_occupancy > max){
+                max = myNode->the_occupancy;
                 most_occ_confname = myNode->name;
                 chainID = myNode->node_chainID;
                 resSeq = myNode->node_resSeq;
@@ -942,12 +942,12 @@ struct OccInRes searchInHash(int key) {
         printf("Search element unavailable in hash table\n");
     
     struct OccInRes result;
-    result.key = most_occ_confname;
+    result.key_resSeq = most_occ_confname;
     result.most_occupancy = max;
     result.OccInRes_chainID = chainID;
     result.OccInRes_resSeq = resSeq;
     result.OccInRes_iConf = iConf;
-    //printf("%d %s max: %5.2f\n",key, most_occ_confname, max);    
+    //printf("%d %s max: %5.2f\n",key_resSeq, most_occ_confname, max);    
     return result;
 }
 
@@ -1025,7 +1025,6 @@ int potential_map(){
         insertToHash(conflist.conf[i].resSeq, conflist.conf[i].uniqID, occ_table[i][env.column_number], conflist.conf[i].chainID, conflist.conf[i].resSeq);
     }
 
-    
     if (env.only_backbone){
         for (i=0; i<prot.n_res; i++){
             iConf =1;
@@ -1034,7 +1033,9 @@ int potential_map(){
                 for (k=0; k<prot.res[i].conf[0].n_atom; k++){
                     if (strlen(prot.res[i].conf[0].atom[k].name) != 0){
                         protein_charge += prot.res[i].conf[0].atom[k].crg;
+                        fprintf(fort11,"%-05s %s      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].rad);
                         fprintf(fort12,"%-05s %s %d      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].resSeq, prot.res[i].conf[0].atom[k].crg);
+                        fprintf(step5_out, "ATOM %5d %4s %4s %4d    %8.3f%8.3f%8.3f%7.3f%7.3f           %1s\n",c, prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].resSeq, prot.res[i].conf[0].atom[k].xyz.x, prot.res[i].conf[0].atom[k].xyz.y, prot.res[i].conf[0].atom[k].xyz.z, 1.00, 0.00, prot.res[i].conf[0].atom[k].name);
                     }
                 }
             }
@@ -1058,15 +1059,40 @@ int potential_map(){
         for (i=0; i<prot.n_res; i++){
             iConf =1;
             result = searchInHash(prot.res[i].resSeq);
-            for (j=0; j<prot.res[i].n_conf; j++){            
-                        if (result.OccInRes_chainID == prot.res[i].chainID && result.OccInRes_resSeq == prot.res[i].resSeq && result.OccInRes_iConf == iConf){
-                            for (k=0; k<prot.res[i].conf[j].n_atom; k++){
-                                if (strlen(prot.res[i].conf[j].atom[k].name) != 0){
-                                    fprintf(fort11,"%-05s %s      %5.2f\n", prot.res[i].conf[j].atom[k].name, prot.res[i].resName, prot.res[i].conf[j].atom[k].rad);
-                                    protein_charge += prot.res[i].conf[j].atom[k].crg;
-                                    fprintf(fort12,"%-05s %s %d      %5.2f\n", prot.res[i].conf[j].atom[k].name, prot.res[i].resName, prot.res[i].resSeq, prot.res[i].conf[j].atom[k].crg);
-                                    if (c<99999) c++;
-                                    fprintf(step5_out, "ATOM %5d %4s %4s %4d    %8.3f%8.3f%8.3f%7.3f%7.3f           %1s\n",c, prot.res[i].conf[j].atom[k].name, prot.res[i].resName, prot.res[i].resSeq, prot.res[i].conf[j].atom[k].xyz.x, prot.res[i].conf[j].atom[k].xyz.y, prot.res[i].conf[j].atom[k].xyz.z, 1.00, 0.00, prot.res[i].conf[j].atom[k].name); 
+            if (strchr(prot.res[i].conf[0].confName, 'BK')){
+                //printf("%c %c %d %d %d %d %d ====\n", result.OccInRes_chainID, prot.res[i].chainID, result.OccInRes_resSeq, prot.res[i].resSeq, result.OccInRes_iConf, iConf, prot.res[i].conf[0].n_atom);
+                for (k=0; k<prot.res[i].conf[0].n_atom; k++){
+                    if (strlen(prot.res[i].conf[0].atom[k].name) != 0){
+                        fprintf(fort11,"%-05s %s      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].conf[0].atom[k].rad);
+                        fprintf(fort12,"%-05s %s %d      %5.2f\n", prot.res[i].conf[0].atom[k].name, prot.res[i].resName, prot.res[i].resSeq, prot.res[i].conf[0].atom[k].crg);
+                        fprintf(step5_out, "ATOM %5d %4s %4s %4d    %8.3f%8.3f%8.3f%7.3f%7.3f           %1s\n",c, 
+                            prot.res[i].conf[0].atom[k].name, 
+                            prot.res[i].resName, 
+                            prot.res[i].resSeq, 
+                            prot.res[i].conf[0].atom[k].xyz.x, 
+                            prot.res[i].conf[0].atom[k].xyz.y, 
+                            prot.res[i].conf[0].atom[k].xyz.z, 
+                            1.00, 
+                            0.00, 
+                            prot.res[i].conf[0].atom[k].name); 
+                        //printf("%c %c %d %d %d %d %s\n", result.OccInRes_chainID, prot.res[i].chainID, result.OccInRes_resSeq, prot.res[i].resSeq, result.OccInRes_iConf, iConf, prot.res[i].conf[0].atom[k].name);
+                    }
+                }
+            }
+            for (j=0; j<prot.res[i].n_conf; j++){    
+            //printf("%c %c %d %d %d %d \n", result.OccInRes_chainID, prot.res[i].chainID, result.OccInRes_resSeq, prot.res[i].resSeq, result.OccInRes_iConf, iConf);        
+                        if (result.OccInRes_chainID == prot.res[i].chainID && result.OccInRes_resSeq == prot.res[i].resSeq){
+                            if (atoi(prot.res[i].conf[j].confID) == result.OccInRes_iConf){
+                            //printf("testing %d %s %s %s %c %c %d %d %d %d: %f \n",j,prot.res[i].conf[j].confID, prot.res[i].conf[j].confName,  prot.res[i].resName, result.OccInRes_chainID, prot.res[i].chainID, result.OccInRes_resSeq, prot.res[i].resSeq, result.OccInRes_iConf, iConf, result.most_occupancy);
+                                for (k=0; k<prot.res[i].conf[j].n_atom; k++){
+                                    if (strlen(prot.res[i].conf[j].atom[k].name) != 0){
+                                        fprintf(fort11,"%-05s %s      %5.2f\n", prot.res[i].conf[j].atom[k].name, prot.res[i].resName, prot.res[i].conf[j].atom[k].rad);
+                                        protein_charge += prot.res[i].conf[j].atom[k].crg;
+                                        fprintf(fort12,"%-05s %s %d      %5.2f\n", prot.res[i].conf[j].atom[k].name, prot.res[i].resName, prot.res[i].resSeq, prot.res[i].conf[j].atom[k].crg);
+                                        if (c<99999) c++;
+                                        fprintf(step5_out, "ATOM %5d %4s %4s %4d    %8.3f%8.3f%8.3f%7.3f%7.3f           %1s\n",c, prot.res[i].conf[j].atom[k].name, prot.res[i].resName, prot.res[i].resSeq, prot.res[i].conf[j].atom[k].xyz.x, prot.res[i].conf[j].atom[k].xyz.y, prot.res[i].conf[j].atom[k].xyz.z, 1.00, 0.00, prot.res[i].conf[j].atom[k].name); 
+                                        //printf("%c %c %d %d %d %d %d\n", result.OccInRes_chainID, prot.res[i].chainID, result.OccInRes_resSeq, prot.res[i].resSeq, result.OccInRes_iConf, iConf, prot.res[i].conf[j].n_atom);        
+                                    }
                                 }
                             }
                         }
