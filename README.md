@@ -1,4 +1,4 @@
-# mcce3.5 | Multi-Conformation Continuum Electrostatics
+# mcce3.5 (beta version) | Multi-Conformation Continuum Electrostatics
 
 Introduction
 ------------
