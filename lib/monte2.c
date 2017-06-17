@@ -5,6 +5,16 @@
 #include <math.h>
 #include "mcce.h"
 
+/*
+
+Yifan's Monte Carlo
+
+Alternative Monte Carlo routine implemented by Yifan that uses an alternative convergence methodology;
+saves computer time compared to standard MC when dealing with large systems.
+
+*/
+
+
 PROT monte2_load_conflist(char *fname);
 PROT monte2_load_pk1out(char *pk1out, char *dconf2);
 void monte2_get_biglist(PROT prot);
