@@ -5,6 +5,11 @@
 #include <math.h>
 #include "mcce.h"
 
+/*
+ * Standard Monte Carlo algorithm 
+ * 
+ */
+
 /* normal pw is garanteed to be smaller than 2000. When it is is bigger than 5000, it is 
  * represents a value refenced to a clashed pair of conformers.
  */
