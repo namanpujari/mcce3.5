@@ -677,6 +677,8 @@ typedef struct {
     int   monte_do_energy;
     int   monte_print_nonzero;
 
+    char  monte_ms;          /* MicroState Monte Carlo flag ----Cai */
+
     float anneal_temp_start;
     float anneal_nstep;
     float anneal_niter_step;
@@ -893,4 +895,5 @@ int energies();
 int energies2();
 int monte();
 int monte2();
+int monte3();     /* monte_ms ---Cai  */
 int postrun();

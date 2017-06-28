@@ -676,6 +676,8 @@ typedef struct {
     int   monte_do_energy;
     int   monte_print_nonzero;
 
+    char  monte_ms;          /* MicroState Monte Carlo flag ----Cai */
+
     int anneal_temp_start; // changed from float to int on Apr 2017 by Salah
     int anneal_nstep;      // changed from float to int on Apr 2017 by Salah
     int anneal_niter_step; // changed from float to int on Apr 2017 by Salah
@@ -757,6 +759,10 @@ typedef struct {
     float mfe_cutoff;
     int   mfe_flag;
     float  mfe_point;
+
+    int   ms_out;             /*used for monte_ms   by Cai */
+    char  always_scale_vdw;   /* used for monte_ms  by Cai */
+
 
     int do_corrections; /*boundary corrections switch*/
     
@@ -890,4 +896,5 @@ int energies();
 int energies2();
 int monte();
 int monte2();
+int monte3();   /* monte_ms ---Cai */
 int postrun();

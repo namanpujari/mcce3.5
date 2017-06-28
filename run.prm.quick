@@ -115,6 +115,7 @@ step 3:
 
 step 4:
 t        Using Yifan's monte carlo                          (MONTE_ADV_OPT)
+t        Output Microstate                                  (MONTE_MS)
 5.0      Big pairwise threshold to make big list            (BIG_PAIRWISE)
 -1       Random seed, -1 uses time as random seed           (MONTE_SEED)
 298.15   Temperature                                        (MONTE_T)

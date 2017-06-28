@@ -21,7 +21,7 @@ db_open.c   free_strings.c  ins_conf.c         plane_3v.c pdbline2atom.c\
 premcce.c   init.c          load_pdb.c write_pdb.c   rotamers.c assign_rad.c get_connect12.c\
 surfw.c   vdw.c vdw_conf.c  shuffle_n.c  cmp_conf.c  sort_conf.c	sort_res.c	 id_conf.c\
 energies.c  assign_crg.c    coulomb.c   coulomb_conf.c\
-get_vdw0.c  get_vdw1.c      relax_water.c      relax_h.c monte.c monte2.c  ran2.c\
+get_vdw0.c  get_vdw1.c      relax_water.c      relax_h.c monte.c monte2.c monte3.c  ran2.c\
 relaxation.c collect_connect.c  torsion.c	vdw_fast.c hbond_extra.c swap.c quick_e.c\
 check_tpl.c zip.c del_dir.c make_matrices.c\
 mem_position.c probe.c add_membrane.c    load_pdb_no_param.c compute_patches.c postrun.c

@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
 
    /* Do step 4. Monte Carlo */
    if (env.do_monte) {
-      if (!env.monte_adv_opt) {
+      /*if (!env.monte_adv_opt) {
       printf("Step 4. Standard Monte Carlo Sampling\n"); fflush(stdout);
       if (monte()) {db_close(); return USERERR;}
            else printf("Step 4 Done.\n\n");
@@ -60,7 +60,22 @@ int main(int argc, char *argv[])
          printf("Step 4. Yifan Monte Carlo Sampling\n"); fflush(stdout);
          if (monte2()) {db_close(); return USERERR;}
          else printf("Step 4 Done.\n\n");
+      } */
+      if (env.monte_adv_opt) {               /* if monte_adv_opt is ture, run Yifan Monte Carlo */
+         printf("Step 4. Yifan Monte Carlo Sampling\n"); fflush(stdout);
+         if (monte2()) {db_close(); return USERERR;}
+         else printf("Step 4 Done.\n\n");
       }
+      else if (env.monte_ms) {               /* If monte_ms is true, run MicroState Monte Carlo Sampling*/
+         printf("Step 4. MicroState Monte Carlo Sampling\n"); fflush(stdout);
+         if (monte3()) {db_close(); return USERERR;}
+         else printf("Step 4 Done.\n\n");
+      }
+      else{                                  /* If all flags are false, run standard Monte Carlo*/
+         printf("Step 4. Standard Monte Carlo Sampling\n"); fflush(stdout);
+         if (monte()) {db_close(); return USERERR;}
+         else printf("Step 4 Done.\n\n");
+      }  
    }
    else printf("Not doing \"Step 4. Monte Carlo Sampling\"\n\n");
    
