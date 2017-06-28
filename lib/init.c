@@ -205,8 +205,11 @@ int get_env()
     
     env.warn_pairwise     = 20.0;
     env.big_pairwise      = 5.0;
-
+/*
     env.monte_adv_opt     =    1;
+*/
+    env.monte_adv_opt     =    0;      /* defaut value in mcce2.5    ----Cai */
+
     env.anneal_temp_start = ROOMT;
     env.anneal_nstep      =    1;
     env.monte_tsx         =    0;
@@ -222,6 +225,10 @@ int get_env()
     env.delphi_clean      =  1;
     env.ionrad = 0.0;
     env.salt = 0.10;
+
+    env.monte_ms          =    1;    /* MicroState Monte Carlo flag---Cai*/
+    env.ms_out            =    1;    /* monte_ms variable ----Cai */
+    env.always_scale_vdw  =    1;    /* monte_ms variable ----Cai */
 
     /* default value for IPECE */
     memset(&env.ipece,0,sizeof(IPECE));
@@ -605,6 +612,14 @@ int get_env()
             if (str1[0] == 't' || str1[0] == 'T') env.monte_adv_opt = 1;
             else env.monte_adv_opt = 0;
         }
+
+        /* MicroState Monte Carlo */
+        else if (strstr(sbuff, "(MONTE_MS)")) {
+            str1 = strtok(sbuff, " ");
+            if (str1[0] == 't' || str1[0] == 'T') env.monte_ms = 1;
+            else env.monte_ms = 0;
+        }
+
         else if (strstr(sbuff, "(MONTE_SEED)")) {
             env.monte_seed = atoi(strtok(sbuff, " "));
         }
@@ -920,6 +935,17 @@ int get_env()
                     env.mfe_point = atof(strtok(sbuff, " "));
                 }
         }
+	
+	/* always_scale_vdw variable ----Cai */
+	else if (strstr(sbuff, "(ALWAYS_SCALE_VDW)")) {
+            str1 = strtok(sbuff, " ");
+            if (str1[0] == 't' || str1[0] == 'T') {
+                env.always_scale_vdw = 1;
+            }
+            else env.always_scale_vdw = 0;
+        }
+
+
         else if (strstr(sbuff, "(DO_CORRECTIONS)")) {
             str1 = strtok(sbuff, " ");
             if (str1[0] == 'f' || str1[0] == 'F') {
@@ -1236,6 +1262,12 @@ int get_env()
 			else if (strstr(trbuff, "(MONTE_ADV_OPT)")) {
 				fprintf(tr, "%31s%31s\t%31s%31d\n", "(MONTE_ADV_OPT)", strtok(trbuff, " "), "env.monte_adv_opt", env.monte_adv_opt);
 			}
+
+                        /* MicroState Monte Carlo */
+                        else if (strstr(trbuff, "(MONTE_MS)")) {
+				fprintf(tr, "%31s%31s\t%31s%31d\n", "(MONTE_MS)", strtok(trbuff, " "), "env.monte_ms", env.monte_ms);
+        		}
+            
 			else if (strstr(trbuff, "(MONTE_CONVERGE)")) {
 				fprintf(tr, "%31s%31s\t%31s%31f\n", "(MONTE_CONVERGE)", strtok(trbuff, " "), "env.monte_converge", env.monte_converge);
 			}
