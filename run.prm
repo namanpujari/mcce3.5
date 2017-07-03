@@ -34,3 +34,7 @@ f        Only the backbone                                  (ONLY_BACKBONE)
 1       Specify titration point                            (COLUMN_NUMBER)
 f        Using mfe pK.out                                   (MFE_PKA)
 
+#============== Analysis
+
+t (DO_ANALYSIS)
+t/f (H_BOND_ANALYSIS)
